@@ -184,7 +184,7 @@
                     </button>
                     <div class="text-[10px] uppercase font-bold opacity-80 mt-1">
                         <p>Soberanía_Local</p>
-                        <p>v1.9.0</p>
+                        <p>v1.10.0</p>
                     </div>
                 </div>
             </header>
@@ -770,14 +770,65 @@
         btnPause.addEventListener('click', handlePause);
         btnStop.addEventListener('click', handleStop);
 
+        // --- SISTEMA DE FRAGMENTACIÓN DE LECTURA (Evita que iOS se coma letras) ---
+        function getNextChunk(startIndex) {
+            if (startIndex >= fullText.length) return null;
+            
+            let maxChunkSize = 250; // Límite seguro para la memoria del motor TTS de iOS
+            let chunk = fullText.substring(startIndex, startIndex + maxChunkSize);
+            
+            if (startIndex + maxChunkSize >= fullText.length) {
+                return { text: chunk, nextIndex: fullText.length };
+            }
+
+            // Buscar el último punto, salto de línea, o signo de exclamación/pregunta
+            let cutPos = -1;
+            let strongPunctuation = Math.max(
+                chunk.lastIndexOf('. '), chunk.lastIndexOf('.\n'),
+                chunk.lastIndexOf('!'), chunk.lastIndexOf('?'), chunk.lastIndexOf('\n')
+            );
+
+            if (strongPunctuation > 0) {
+                cutPos = strongPunctuation + 1; // Cortar justo después del punto
+            } else {
+                // Si no hay punto fuerte, buscar coma o punto y coma
+                let weakPunctuation = Math.max(chunk.lastIndexOf(', '), chunk.lastIndexOf('; '));
+                if (weakPunctuation > 0) {
+                    cutPos = weakPunctuation + 1;
+                } else {
+                    // Último recurso: cortar en el espacio en blanco para no partir palabras
+                    let lastSpace = chunk.lastIndexOf(' ');
+                    if (lastSpace > 0) cutPos = lastSpace;
+                }
+            }
+
+            if (cutPos > 0) {
+                return { 
+                    text: chunk.substring(0, cutPos), 
+                    nextIndex: startIndex + cutPos 
+                };
+            }
+
+            return { text: chunk, nextIndex: startIndex + maxChunkSize };
+        }
+
         function playFromCurrentIndex() {
-            if (currentCharIndex >= fullText.length - 10) {
+            if (currentCharIndex >= fullText.length - 2) {
                 handleFinish();
                 return;
             }
 
-            const textToRead = fullText.substring(currentCharIndex);
-            const utterance = new SpeechSynthesisUtterance(textToRead);
+            let chunkData = getNextChunk(currentCharIndex);
+            
+            // Si el fragmento es puro espacio en blanco o basura, lo saltamos silenciosamente
+            if (!chunkData || !chunkData.text.trim()) {
+                currentCharIndex = chunkData ? chunkData.nextIndex : fullText.length;
+                if (currentCharIndex < fullText.length) playFromCurrentIndex();
+                else handleFinish();
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(chunkData.text);
             
             if (currentVoice) utterance.voice = currentVoice;
             
@@ -788,17 +839,28 @@
 
             utterance.onboundary = (e) => {
                 if (!isDraggingProgress) {
+                    // Vinculamos el avance de la barra al índice global del texto
                     currentCharIndex = startIndexForThisRun + e.charIndex;
                     const percentage = (currentCharIndex / fullText.length) * 100;
                     progressSlider.value = percentage;
                 }
             };
 
-            utterance.onend = () => { if (isPlaying) handleFinish(); };
+            utterance.onend = () => { 
+                if (isPlaying) {
+                    currentCharIndex = chunkData.nextIndex;
+                    playFromCurrentIndex(); // Encadenar la siguiente oración
+                }
+            };
             
             utterance.onerror = (e) => {
                 if(e.error !== 'canceled' && e.error !== 'interrupted') {
                     console.error("Error TTS:", e);
+                    // Si hay un glitch, intentar forzar la continuación
+                    if (isPlaying) {
+                        currentCharIndex = chunkData.nextIndex;
+                        playFromCurrentIndex();
+                    }
                 }
             };
 
