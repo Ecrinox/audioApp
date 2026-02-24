@@ -13,9 +13,9 @@
     <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=AQ&background=050505&color=00ff41&size=512&font-size=0.4&bold=true">
     <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=AQ&background=050505&color=00ff41&size=512&font-size=0.4&bold=true">
 
-    <title>Audio-Queue [PWA]</title>
+    <title>Audio-Queue</title>
     
-    <!-- Tailwind CSS con Configuración Dinámica -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -166,7 +166,6 @@
 
     <div id="app-container">
         
-        <!-- Área de contenido scrolleable -->
         <div id="scroll-area" class="p-4 flex flex-col gap-6">
             
             <!-- Header -->
@@ -180,7 +179,7 @@
                     </button>
                     <div class="text-[10px] uppercase font-bold opacity-80 mt-1">
                         <p>Soberanía_Local</p>
-                        <p>v1.12.0 (Motor Táctico)</p>
+                        <p>v1.13.0 (Origen Puro)</p>
                     </div>
                 </div>
             </header>
@@ -226,7 +225,6 @@
                 </ul>
             </section>
             
-            <!-- Espaciador para que el reproductor no tape el último item -->
             <div class="h-24"></div>
         </div>
 
@@ -278,8 +276,7 @@
                 <input type="range" id="progress-slider" min="0" max="100" step="0.1" value="0" class="w-full" disabled>
             </div>
             
-            <!-- Audio silencioso ampliado (Garantiza mantener el hardware despierto para no comer consonantes) -->
-            <audio id="bg-audio" loop playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"></audio>
+            <!-- SE ELIMINÓ EL bg-audio. Volvemos al motor puro. -->
         </footer>
 
     </div>
@@ -325,11 +322,10 @@
         let currentVoice = null;
         let currentItemIndex = -1;
         
-        // --- VARIABLES DEL MOTOR TÁCTICO ---
-        let textChunks = [];
-        let currentChunkIndex = 0;
+        // --- VARIABLES DEL MOTOR PURO ---
+        let fullText = "";
+        let currentCharIndex = 0;
         let isDraggingProgress = false; 
-        let isSpeakingInternal = false;
 
         // Referencias DOM
         const urlInput = document.getElementById('url-input');
@@ -350,7 +346,6 @@
         const rateSlider = document.getElementById('rate-slider');
         const rateVal = document.getElementById('rate-val');
         const progressSlider = document.getElementById('progress-slider');
-        const bgAudio = document.getElementById('bg-audio');
 
         let sources = JSON.parse(localStorage.getItem('audioQueue_sources_v1')) || [];
         sourcesInput.value = sources.join('\n');
@@ -392,7 +387,7 @@
             currentVoice = availableVoices.find(v => v.voiceURI === e.target.value);
             if (isPlaying && currentItemIndex !== -1) {
                 window.speechSynthesis.cancel();
-                playNextChunk(); 
+                playFromCurrentIndex(); 
             }
         });
 
@@ -607,7 +602,6 @@
 
             if (indexToDelete === currentItemIndex) {
                 window.speechSynthesis.cancel();
-                bgAudio.pause();
                 isPlaying = false;
                 currentItemIndex = -1;
                 nowPlayingTitle.innerText = "[NO_DATA_SELECTED]";
@@ -655,29 +649,9 @@
             }
         });
 
-        // --- CEREBRO DE FRAGMENTACIÓN GRAMATICAL TÁCTICA ---
-        // Cortamos de manera segura (en los puntos y saltos de línea) para que 
-        // iOS nunca sature su buffer, y le añadimos un espacio para que el hardware 
-        // despierte y no se coma las consonantes.
-        function generateTacticalChunks(text) {
-            let chunks = [];
-            let sentences = text.split(/(?<=[.?!;:]\s)|\n/);
-            
-            sentences.forEach(sentence => {
-                let s = sentence.trim();
-                if (s.length > 0) {
-                    if (s.length > 250) {
-                        let subSentences = s.split(/(?<=[,]\s)/);
-                        subSentences.forEach(ss => {
-                            if(ss.trim().length > 0) chunks.push(ss.trim());
-                        });
-                    } else {
-                        chunks.push(s);
-                    }
-                }
-            });
-            return chunks;
-        }
+        // =========================================================
+        // MOTOR DE LECTURA NATIVO (PURO)
+        // =========================================================
 
         window.loadAndPlay = function(index) {
             handleStop(); 
@@ -689,16 +663,15 @@
             savePlaylist();
             renderPlaylist();
 
-            // Generamos el armamento táctico
-            textChunks = generateTacticalChunks(playlist[currentItemIndex].text);
-            currentChunkIndex = 0;
+            fullText = playlist[currentItemIndex].text;
+            currentCharIndex = 0;
             progressSlider.value = 0;
             progressSlider.disabled = false;
 
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({
                     title: playlist[currentItemIndex].title,
-                    artist: 'Audio-Queue PWA',
+                    artist: 'Audio-Queue',
                     album: 'Investigación y Modelos'
                 });
             }
@@ -726,32 +699,30 @@
         function handlePlay() {
             if (currentItemIndex === -1) { alert(">> Carga un artículo primero."); return; }
             if (isPlaying) return;
-
-            // Arrancamos el marcapasos (vital para el fondo y las consonantes)
-            bgAudio.play().catch(e => console.log("Permiso de audio", e));
             
             isPlaying = true;
-            isSpeakingInternal = true;
             updatePlayerButtons('playing');
-            playNextChunk();
+            
+            // Si el motor estaba simplemente en pausa, lo reanudamos nativamente
+            if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+            } else {
+                playFromCurrentIndex();
+            }
         }
 
         function handlePause() {
             if (!isPlaying) return;
             isPlaying = false;
-            isSpeakingInternal = false;
-            window.speechSynthesis.cancel(); 
-            bgAudio.pause();
+            window.speechSynthesis.pause(); 
             updatePlayerButtons('paused');
         }
 
         function handleStop() {
             if (currentItemIndex === -1) return;
             isPlaying = false;
-            isSpeakingInternal = false;
             window.speechSynthesis.cancel();
-            bgAudio.pause();
-            currentChunkIndex = 0;
+            currentCharIndex = 0;
             progressSlider.value = 0;
             updatePlayerButtons('stopped');
             
@@ -767,65 +738,53 @@
         btnPause.addEventListener('click', handlePause);
         btnStop.addEventListener('click', handleStop);
 
-        function playNextChunk() {
-            if (!isPlaying) return;
-            
-            if (currentChunkIndex >= textChunks.length) {
+        function playFromCurrentIndex() {
+            if (currentCharIndex >= fullText.length - 10) {
                 handleFinish();
                 return;
             }
 
-            // ANTI-CLIPPING: Agregamos un espacio microscópico al inicio. 
-            // Como el bgAudio ya está forzando al hardware a estar despierto, 
-            // esta pequeña inyección garantiza que la compuerta no se trague letras.
-            let chunkText = textChunks[currentChunkIndex];
-            const utterance = new SpeechSynthesisUtterance(" " + chunkText);
+            // Alimentamos al motor de Apple con un solo bloque continuo.
+            // Esto evita que tenga que iniciar procesos de audio repetidamente,
+            // eliminando de raíz el "clipping" (comerse consonantes).
+            const textToRead = fullText.substring(currentCharIndex);
+            const utterance = new SpeechSynthesisUtterance(textToRead);
             
             if (currentVoice) utterance.voice = currentVoice;
             const sliderVal = parseFloat(rateSlider.value);
             utterance.rate = sliderVal >= 0 ? 1 + (sliderVal / 2) : 1 + (sliderVal * 0.25);
             
+            const startIndexForThisRun = currentCharIndex;
+
+            // Atamos el slider al progreso real de lectura de Safari
+            utterance.onboundary = (e) => {
+                if (!isDraggingProgress) {
+                    currentCharIndex = startIndexForThisRun + e.charIndex;
+                    const percentage = (currentCharIndex / fullText.length) * 100;
+                    progressSlider.value = percentage;
+                }
+            };
+
             utterance.onend = () => {
+                // Solo disparamos el final si no fue cancelado a propósito
                 if (isPlaying) {
-                    currentChunkIndex++;
-                    if (!isDraggingProgress) {
-                        progressSlider.value = (currentChunkIndex / textChunks.length) * 100;
-                    }
-                    playNextChunk();
+                    handleFinish();
                 }
             };
 
             utterance.onerror = (e) => {
                 if(e.error !== 'canceled' && e.error !== 'interrupted') {
                     console.error("Error TTS:", e);
-                    // Si falla por bug de iOS, forzamos el avance para que no se quede trabado
-                    if (isPlaying) {
-                        currentChunkIndex++;
-                        playNextChunk();
-                    }
+                    isPlaying = false;
+                    updatePlayerButtons('stopped');
                 }
             };
 
-            isSpeakingInternal = true;
             window.speechSynthesis.speak(utterance);
         }
 
-        // --- VIGILANCIA EN SEGUNDO PLANO (El Resucitador) ---
-        // El audio silencioso genera pulsos. Si detecta que la voz artificial "murió" 
-        // (porque apagaste la pantalla) mientras debería estar hablando, la resucita.
-        bgAudio.addEventListener('timeupdate', () => {
-            if (!isPlaying) return;
-            
-            if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending && isSpeakingInternal) {
-                console.log(">> Resucitando proceso en segundo plano...");
-                window.speechSynthesis.cancel(); 
-                playNextChunk(); 
-            }
-        });
-
         function handleFinish() {
             isPlaying = false;
-            isSpeakingInternal = false;
             updatePlayerButtons('stopped');
             if (currentItemIndex !== -1 && playlist[currentItemIndex]) {
                 playlist[currentItemIndex].status = 'Leido';
@@ -834,7 +793,6 @@
             }
             setTimeout(() => {
                 alert(">> Lectura Finalizada");
-                bgAudio.pause();
             }, 500);
         }
 
@@ -847,7 +805,7 @@
         rateSlider.addEventListener('change', (e) => {
             if (isPlaying && currentItemIndex !== -1) {
                 window.speechSynthesis.cancel();
-                playNextChunk();
+                playFromCurrentIndex();
             }
         });
 
@@ -857,18 +815,20 @@
 
         progressSlider.addEventListener('change', (e) => {
             isDraggingProgress = false;
-            if (currentItemIndex === -1 || textChunks.length === 0) return;
+            if (currentItemIndex === -1 || fullText.length === 0) return;
 
             const percentage = parseFloat(e.target.value);
-            currentChunkIndex = Math.floor((percentage / 100) * textChunks.length);
-            
-            if (currentChunkIndex >= textChunks.length) {
-                currentChunkIndex = textChunks.length - 1;
+            let targetIndex = Math.floor((percentage / 100) * fullText.length);
+
+            while (targetIndex > 0 && !/\s/.test(fullText[targetIndex - 1])) {
+                targetIndex--;
             }
+
+            currentCharIndex = targetIndex;
 
             if (isPlaying) {
                 window.speechSynthesis.cancel();
-                playNextChunk();
+                playFromCurrentIndex();
             }
         });
 
