@@ -70,7 +70,8 @@
         #app-container {
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
-            height: 100vh;
+            height: 100vh; /* Fallback navegadores viejos */
+            height: 100dvh; /* Fix definitivo para la barra de Safari en iOS */
             display: flex;
             flex-direction: column;
         }
@@ -121,7 +122,7 @@
                 </div>
                 <div class="text-right text-[10px] uppercase font-bold opacity-80">
                     <p>Soberanía_Local</p>
-                    <p>v1.4.0 (Invertido)</p>
+                    <p>v1.5.0 (Motor Continuo)</p>
                 </div>
             </header>
 
@@ -230,7 +231,7 @@
          */
         let playlist = JSON.parse(localStorage.getItem('audioQueue_db_v1')) || [];
         
-        // --- AUTO-CORRECTOR DE ORDEN (Garantiza notas nuevas arriba) ---
+        // --- AUTO-CORRECTOR DE ORDEN ---
         playlist.sort((a, b) => {
             const parseDateStr = (dateStr, id) => {
                 if (dateStr && dateStr.includes('/')) {
@@ -247,9 +248,10 @@
         let currentVoice = null;
         let currentItemIndex = -1;
         
-        // Manejo de la cola de fragmentos (chunks)
-        let textChunks = [];
-        let currentChunkIndex = 0;
+        // --- NUEVO MOTOR DE LECTURA CONTINUA ---
+        let fullText = "";
+        let currentCharIndex = 0;
+        let keepAliveInterval = null;
 
         // Fuentes RSS
         let sources = JSON.parse(localStorage.getItem('audioQueue_sources_v1')) || [];
@@ -320,8 +322,7 @@
             currentVoice = availableVoices.find(v => v.voiceURI === e.target.value);
             if (isPlaying && currentItemIndex !== -1) {
                 window.speechSynthesis.cancel();
-                currentChunkIndex = Math.max(0, currentChunkIndex - 1); 
-                playCurrentChunk();
+                playFromCurrentIndex(); // Reinicia con la nueva voz desde donde se quedó
             }
         });
 
@@ -332,7 +333,6 @@
          * LIMPIEZA DE TEXTO (JINA AI -> LECTURA PURA)
          */
         function cleanJinaText(rawText) {
-            // 1. Amputar la metadata técnica que inyecta Jina API
             let contentStart = rawText.indexOf('Markdown Content:');
             let baseText = contentStart !== -1 ? rawText.substring(contentStart + 17) : rawText;
 
@@ -340,13 +340,13 @@
                 .replace(/Title:.*?(\n|$)/gi, '')
                 .replace(/URL Source:.*?(\n|$)/gi, '')
                 .replace(/Published Time:.*?(\n|$)/gi, '')
-                .replace(/\[.*?\]\(.*?\)/g, '') // Quitar links markdown completos
-                .replace(/[*_#`=>-\[\]]/g, ' ') // Quitar formato markdown y corchetes huérfanos
-                .replace(/(https?:\/\/[^\s]+)/g, '') // Eliminar URLs
-                .replace(/\b(Menú|Navegación|Buscar|Compartir|Search|Log in|Sign up|Suscribirse)\b/gi, '') // UI basura
-                .replace(/\b(El Cohete a la Luna|Substack|Medium)\b/gi, '') // Nombres de sitios residuales
-                .replace(/\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\s+\d{1,2},?\s+\d{4}\b/gi, '') // Fechas huérfanas en cabeceras
-                .replace(/\s{2,}/g, ' ') // Reducir espacios múltiples
+                .replace(/\[.*?\]\(.*?\)/g, '') 
+                .replace(/[*_#`=>-\[\]]/g, ' ') 
+                .replace(/(https?:\/\/[^\s]+)/g, '') 
+                .replace(/\b(Menú|Navegación|Buscar|Compartir|Search|Log in|Sign up|Suscribirse)\b/gi, '') 
+                .replace(/\b(El Cohete a la Luna|Substack|Medium)\b/gi, '') 
+                .replace(/\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\s+\d{1,2},?\s+\d{4}\b/gi, '') 
+                .replace(/\s{2,}/g, ' ') 
                 .trim();
         }
 
@@ -370,7 +370,6 @@
                 
                 const text = await response.text();
                 
-                // Usar la metadata de Jina para sacar un título exacto antes de amputarla
                 let titleMatch = text.match(/Title:\s*(.*)/i);
                 let title = titleMatch && titleMatch[1] ? titleMatch[1].trim() : "Extracción Manual";
                 if(title.length > 60) title = title.substring(0, 60) + "...";
@@ -387,7 +386,6 @@
                     status: 'Pendiente'
                 };
 
-                // Desplazar el puntero si estamos reproduciendo algo
                 if (currentItemIndex !== -1) currentItemIndex++;
                 
                 playlist.unshift(newItem); 
@@ -448,7 +446,6 @@
                     const data = await response.json();
                     if (data.status !== 'ok' || !data.items) continue;
 
-                    // IMPORTANTE: .reverse() corrige el orden del lote para que la más nueva quede arriba
                     const recentItems = data.items.slice(0, 3).reverse();
                     
                     for (const item of recentItems) {
@@ -478,7 +475,6 @@
                                     status: 'Pendiente'
                                 };
                                 
-                                // Desplazar puntero si hay audio corriendo
                                 if (currentItemIndex !== -1) currentItemIndex++;
                                 
                                 playlist.unshift(newItem);
@@ -556,7 +552,6 @@
             const indexToDelete = playlist.findIndex(item => item.id === id);
             if (indexToDelete === -1) return;
 
-            // Mantener consistencia del reproductor si borramos algo
             if (indexToDelete === currentItemIndex) {
                 window.speechSynthesis.cancel();
                 bgAudio.pause();
@@ -578,7 +573,6 @@
             const item = playlist.find(p => p.id === id);
             if(!item) return;
 
-            // Usamos un textarea oculto para asegurar compatibilidad en iOS/Iframes
             const textArea = document.createElement("textarea");
             textArea.value = `${item.title}\n\n${item.text}`;
             document.body.appendChild(textArea);
@@ -586,12 +580,9 @@
             
             try {
                 document.execCommand('copy');
-                
-                // Feedback visual en el botón
                 const originalText = btnElement.innerText;
                 btnElement.innerText = "[ ¡COPIADO! ]";
                 btnElement.classList.add('bg-[#00ff41]', 'text-black');
-                
                 setTimeout(() => {
                     btnElement.innerText = originalText;
                     btnElement.classList.remove('bg-[#00ff41]', 'text-black');
@@ -599,7 +590,6 @@
             } catch (err) {
                 console.error('Error al copiar texto', err);
             }
-            
             document.body.removeChild(textArea);
         };
 
@@ -615,8 +605,7 @@
          * MOTOR DE REPRODUCCIÓN (TEXT-TO-SPEECH)
          */
         window.loadAndPlay = function(index) {
-            window.speechSynthesis.cancel();
-            isPlaying = false;
+            handleStop(); // Frena todo antes de cargar uno nuevo
             
             playlist.forEach(p => { if(p.status === 'Escuchando') p.status = 'Pendiente' });
             
@@ -627,13 +616,9 @@
             savePlaylist();
             renderPlaylist();
 
-            const fullText = playlist[currentItemIndex].text;
-            
-            textChunks = fullText.split(/(?<=\.)\s+|\n+/).filter(chunk => {
-                return /[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9]/.test(chunk) && chunk.trim().length > 2;
-            });
-            
-            currentChunkIndex = 0;
+            // Carga el texto COMPLETO (Sin cortarlo en pedazos para evadir a Apple)
+            fullText = playlist[currentItemIndex].text;
+            currentCharIndex = 0;
             progressBar.style.width = '0%';
 
             if ('mediaSession' in navigator) {
@@ -671,31 +656,32 @@
             }
             if (isPlaying) return;
 
+            // Arrancar el audio silencioso para habilitar los controles de iOS
             bgAudio.play().catch(e => console.log("Permiso de audio pendiente", e));
             
-            if (window.speechSynthesis.paused) {
-                window.speechSynthesis.resume();
-            } else {
-                playCurrentChunk();
-            }
             isPlaying = true;
             updatePlayerButtons('playing');
+            playFromCurrentIndex();
         }
 
         function handlePause() {
             if (!isPlaying) return;
-            window.speechSynthesis.pause();
-            bgAudio.pause();
             isPlaying = false;
+            clearInterval(keepAliveInterval);
+            
+            // Cancel aborta la lectura pero preserva el último currentCharIndex
+            window.speechSynthesis.cancel(); 
+            bgAudio.pause();
             updatePlayerButtons('paused');
         }
 
         function handleStop() {
             if (currentItemIndex === -1) return;
+            isPlaying = false;
+            clearInterval(keepAliveInterval);
             window.speechSynthesis.cancel();
             bgAudio.pause();
-            isPlaying = false;
-            currentChunkIndex = 0;
+            currentCharIndex = 0;
             progressBar.style.width = '0%';
             updatePlayerButtons('stopped');
             
@@ -711,55 +697,89 @@
         btnPause.addEventListener('click', handlePause);
         btnStop.addEventListener('click', handleStop);
 
-        function playCurrentChunk() {
-            if (currentChunkIndex >= textChunks.length) {
-                isPlaying = false;
-                updatePlayerButtons('stopped');
-                
-                playlist[currentItemIndex].status = 'Leido';
-                savePlaylist();
-                renderPlaylist();
-                
-                setTimeout(() => {
-                    alert(">> Lectura Finalizada");
-                    bgAudio.pause();
-                }, 500);
+        // LA MAGIA DE LA LECTURA EN SEGUNDO PLANO
+        function playFromCurrentIndex() {
+            if (currentCharIndex >= fullText.length - 10) {
+                handleFinish();
                 return;
             }
 
-            const chunk = textChunks[currentChunkIndex];
-            const utterance = new SpeechSynthesisUtterance(chunk);
+            // Creamos un único bloque de texto desde donde nos quedamos
+            const textToRead = fullText.substring(currentCharIndex);
+            const utterance = new SpeechSynthesisUtterance(textToRead);
             
             if (currentVoice) utterance.voice = currentVoice;
             
             const sliderVal = parseFloat(rateSlider.value);
             utterance.rate = sliderVal >= 0 ? 1 + (sliderVal / 2) : 1 + (sliderVal * 0.25);
             
+            const startIndexForThisRun = currentCharIndex;
+
+            // Actualiza la barra y guarda la posición exacta por si pausamos
+            utterance.onboundary = (e) => {
+                currentCharIndex = startIndexForThisRun + e.charIndex;
+                const percentage = (currentCharIndex / fullText.length) * 100;
+                progressBar.style.width = `${percentage}%`;
+            };
+
             utterance.onend = () => {
-                currentChunkIndex++;
-                updateProgress();
-                playCurrentChunk(); 
+                if (isPlaying) { 
+                    handleFinish();
+                }
             };
 
             utterance.onerror = (e) => {
-                console.error("Error TTS:", e);
-                isPlaying = false;
-                updatePlayerButtons('stopped');
+                // Ignore "canceled" error which happens naturally when we press Pause
+                if(e.error !== 'canceled' && e.error !== 'interrupted') {
+                    console.error("Error TTS:", e);
+                    isPlaying = false;
+                    updatePlayerButtons('stopped');
+                    clearInterval(keepAliveInterval);
+                }
             };
 
             window.speechSynthesis.speak(utterance);
+
+            // EL MICRO-RESPIRADOR: Bypassea el límite de 15 segundos de Apple en background
+            clearInterval(keepAliveInterval);
+            keepAliveInterval = setInterval(() => {
+                if (isPlaying) {
+                    window.speechSynthesis.pause();
+                    window.speechSynthesis.resume();
+                }
+            }, 12000); // 12 segundos exactos
         }
 
-        function updateProgress() {
-            if(textChunks.length === 0) return;
-            const percentage = ((currentChunkIndex) / textChunks.length) * 100;
-            progressBar.style.width = `${percentage}%`;
+        function handleFinish() {
+            isPlaying = false;
+            updatePlayerButtons('stopped');
+            clearInterval(keepAliveInterval);
+            
+            if (currentItemIndex !== -1 && playlist[currentItemIndex]) {
+                playlist[currentItemIndex].status = 'Leido';
+                savePlaylist();
+                renderPlaylist();
+            }
+            
+            setTimeout(() => {
+                alert(">> Lectura Finalizada");
+                bgAudio.pause();
+            }, 500);
         }
 
+        // Actualizar etiqueta del slider en tiempo real
         rateSlider.addEventListener('input', (e) => {
             const sliderVal = parseFloat(e.target.value);
             const actualRate = sliderVal >= 0 ? 1 + (sliderVal / 2) : 1 + (sliderVal * 0.25);
             rateVal.innerText = `${actualRate.toFixed(1)}x`;
+        });
+
+        // Aplicar la velocidad solo cuando se suelta el slider (evita el spam)
+        rateSlider.addEventListener('change', (e) => {
+            if (isPlaying && currentItemIndex !== -1) {
+                window.speechSynthesis.cancel();
+                playFromCurrentIndex();
+            }
         });
 
         if ('mediaSession' in navigator) {
