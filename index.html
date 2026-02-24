@@ -1,18 +1,23 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
     <!-- PWA iOS Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Audio-Queue">
+    
+    <!-- Íconos de App (Generados dinámicamente) -->
+    <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=AQ&background=050505&color=00ff41&size=512&font-size=0.4&bold=true">
+    <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=AQ&background=050505&color=00ff41&size=512&font-size=0.4&bold=true">
+
     <title>Audio-Queue [PWA]</title>
     
-    <!-- Tailwind CSS (CDN for standalone file) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
+
     <!-- Google Fonts: JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,131 +26,149 @@
     <style>
         /* Configuraciones Brutalistas y The Vibe */
         :root {
-            --term-green: #00ff41;
-            --ind-orange: #ff6600;
+            --neon-green: #00ff41;
+            --neon-orange: #ff6600;
             --bg-black: #050505;
         }
-        
         body {
-            font-family: 'JetBrains Mono', monospace;
             background-color: var(--bg-black);
-            color: var(--term-green);
-            /* Evitar overscroll en iOS */
-            overscroll-behavior-y: none; 
-        }
-
-        /* Scrollbar styling para mantener el vibe */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: var(--bg-black);
-            border-left: 1px solid var(--term-green);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: var(--term-green);
-        }
-
-        .brutal-border {
-            border: 2px solid var(--term-green);
-            border-radius: 0;
-            box-shadow: 4px 4px 0px var(--term-green);
-            transition: all 0.1s ease;
-        }
-
-        .brutal-border:active {
-            transform: translate(2px, 2px);
-            box-shadow: 2px 2px 0px var(--term-green);
-        }
-
-        .brutal-border-orange {
-            border: 2px solid var(--ind-orange);
-            border-radius: 0;
-            box-shadow: 4px 4px 0px var(--ind-orange);
+            color: var(--neon-green);
+            font-family: 'JetBrains Mono', monospace;
+            -webkit-font-smoothing: antialiased;
+            overscroll-behavior-y: none; /* Evita el "rebote" en iOS */
         }
         
+        .brutal-border {
+            border: 2px solid var(--neon-green);
+            box-shadow: 4px 4px 0px var(--neon-green);
+        }
+        
+        .brutal-border-orange {
+            border: 2px solid var(--neon-orange);
+            box-shadow: 3px 3px 0px var(--neon-orange);
+        }
+
         .brutal-input {
-            background-color: var(--bg-black);
-            border: 2px solid var(--term-green);
-            color: var(--term-green);
-            border-radius: 0;
+            background-color: black;
+            border: 2px solid var(--neon-green);
+            color: white;
             outline: none;
         }
         
         .brutal-input:focus {
-            border-color: var(--ind-orange);
-            box-shadow: 4px 4px 0px var(--ind-orange);
+            border-color: white;
+            box-shadow: 4px 4px 0px white;
         }
 
-        /* Ajustes de Safe Area para iPhone modernos (Dynamic Island y Home Bar) */
-        header {
-            padding-top: calc(1rem + env(safe-area-inset-top)) !important;
+        /* Ocultar scrollbar pero permitir scroll */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
         }
 
-        /* Layout para que el reproductor quede fijo abajo */
+        /* Layout para PWA en iOS (respeta el notch/dynamic island) */
         #app-container {
+            padding-top: env(safe-area-inset-top);
+            padding-bottom: env(safe-area-inset-bottom);
+            height: 100vh;
             display: flex;
             flex-direction: column;
-            height: 100vh;
-            height: 100dvh; /* Para Safari en iOS */
         }
-        #main-content {
+
+        #scroll-area {
             flex: 1;
             overflow-y: auto;
-            /* Aumentamos el padding para compensar el reproductor más alto por el safe-area */
-            padding-bottom: calc(150px + env(safe-area-inset-bottom)); 
         }
+
         #player-container {
-            position: fixed;
-            bottom: 0;
-            left: 0;
+            border-top: 4px solid var(--neon-green);
+            background-color: #000;
+        }
+        
+        /* Modificar el slider nativo */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            background: var(--neon-green);
+            cursor: pointer;
+            margin-top: -6px;
+            border-radius: 0;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
-            background-color: var(--bg-black);
-            border-top: 2px solid var(--term-green);
-            z-index: 50;
-            padding-bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+            height: 4px;
+            cursor: pointer;
+            background: #333;
         }
     </style>
 </head>
-<body class="antialiased selection:bg-[#00ff41] selection:text-black">
+<body class="selection:bg-[#00ff41] selection:text-black">
 
     <div id="app-container">
         
-        <!-- Header -->
-        <header class="p-4 border-b-2 border-[#00ff41]">
-            <h1 class="text-2xl font-extrabold uppercase tracking-tighter">
-                > Audio-Queue_ <span class="animate-pulse text-[#ff6600]">█</span>
-            </h1>
-            <p class="text-xs opacity-70 mt-1">// Extractor & Lector TTS iOS</p>
-        </header>
-
-        <!-- Main Content -->
-        <main id="main-content" class="p-4 flex flex-col gap-6">
+        <!-- Área de contenido scrolleable -->
+        <div id="scroll-area" class="p-4 flex flex-col gap-6">
             
-            <!-- Ingesta -->
+            <!-- Header -->
+            <header class="flex justify-between items-end border-b-4 border-[#00ff41] pb-2">
+                <div>
+                    <h1 class="text-2xl font-extrabold uppercase tracking-tighter leading-none">AUDIO<br>QUEUE</h1>
+                </div>
+                <div class="text-right text-[10px] uppercase font-bold opacity-80">
+                    <p>Soberanía_Local</p>
+                    <p>v1.4.0 (Invertido)</p>
+                </div>
+            </header>
+
+            <!-- Ingesta Manual -->
             <section class="flex flex-col gap-3">
-                <label class="text-sm font-bold uppercase">> Ingestar URL:</label>
-                <div class="flex gap-2">
-                    <input type="url" id="url-input" placeholder="https://..." class="brutal-input p-3 flex-1 w-full" autocomplete="off">
-                    <button id="btn-ingest" class="brutal-border bg-black text-[#00ff41] px-4 py-2 font-bold uppercase hover:bg-[#00ff41] hover:text-black">
+                <label class="text-sm font-bold uppercase">> Ingesta_Manual (URL):</label>
+                <div class="flex gap-2 h-12">
+                    <input type="url" id="url-input" placeholder="https://..." class="brutal-input flex-1 px-3 text-sm" autocomplete="off">
+                    <button id="btn-ingest" class="brutal-border bg-[#00ff41] text-black px-4 font-extrabold uppercase hover:bg-black hover:text-[#00ff41] transition-colors">
                         Extraer
                     </button>
                 </div>
                 <div id="status-msg" class="text-xs hidden text-[#ff6600] font-bold"></div>
             </section>
 
+            <!-- Fuentes RSS Automáticas -->
+            <section class="flex flex-col gap-3 border-t-2 border-dashed border-[#00ff41] pt-4">
+                <div class="flex justify-between items-center">
+                    <label class="text-sm font-bold uppercase">> Fuentes_RSS_Automáticas:</label>
+                    <button id="btn-toggle-sources" class="text-xs uppercase text-[#00ff41] hover:text-white">[Editar]</button>
+                </div>
+                
+                <div id="sources-config" class="hidden flex-col gap-2">
+                    <textarea id="sources-input" rows="3" placeholder="https://ejemplo.com/feed&#10;Una URL por línea..." class="brutal-input p-2 text-xs w-full leading-tight font-mono"></textarea>
+                    <p class="text-[9px] opacity-70">// Pegá links RSS de Substacks, Medium o blogs periodísticos.</p>
+                </div>
+                
+                <button id="btn-sync" class="brutal-border bg-[#00ff41] text-black px-4 py-3 font-extrabold uppercase hover:bg-black hover:text-[#00ff41] transition-colors shadow-none text-sm tracking-widest">
+                    [ Sincronizar Novedades ]
+                </button>
+            </section>
+
             <!-- Playlist -->
             <section class="flex flex-col gap-3">
-                <div class="flex justify-between items-end border-b-2 border-[#00ff41] pb-2">
-                    <label class="text-sm font-bold uppercase">> Playlist_Data:</label>
-                    <button id="btn-clear" class="text-xs text-red-500 hover:text-red-400 uppercase">[Purgar_Leídos]</button>
+                <div class="flex justify-between items-end">
+                    <label class="text-sm font-bold uppercase">> Cola_de_Lectura:</label>
+                    <button id="btn-clear" class="text-xs text-red-500 hover:text-red-400 uppercase">[Purgar]</button>
                 </div>
+                
                 <ul id="playlist-container" class="flex flex-col gap-3">
                     <!-- Los items se inyectan acá vía JS -->
                 </ul>
             </section>
-
-        </main>
+            
+            <!-- Espaciador para que el reproductor no tape el último item -->
+            <div class="h-24"></div>
+        </div>
 
         <!-- Reproductor Fijo -->
         <footer id="player-container" class="p-4 flex flex-col gap-3">
@@ -153,28 +176,49 @@
                 <div class="truncate pr-4 text-sm font-bold" id="now-playing-title">
                     [NO_DATA_SELECTED]
                 </div>
-                <div class="text-xs border border-[#00ff41] px-1" id="voice-indicator">
-                    VOZ: --
+                <div class="text-xs border border-[#00ff41] bg-black text-[#00ff41]">
+                    <select id="voice-select" class="bg-black text-[#00ff41] outline-none max-w-[130px] truncate p-1 cursor-pointer font-bold uppercase appearance-none">
+                        <option value="">VOZ: --</option>
+                    </select>
                 </div>
             </div>
             
             <div class="flex items-center gap-4">
-                <button id="btn-play-pause" class="brutal-border-orange bg-[#ff6600] text-black px-6 py-3 font-extrabold uppercase w-1/3 hover:bg-black hover:text-[#ff6600]">
-                    PLAY
-                </button>
+                <!-- Botonera tipo grabador -->
+                <div class="flex gap-2 w-1/3">
+                    <button id="btn-play" class="flex-1 brutal-border-orange bg-black text-[#ff6600] py-3 flex justify-center items-center hover:bg-[#ff6600] hover:text-black transition-colors" title="Play">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </button>
+                    <button id="btn-pause" class="flex-1 brutal-border-orange bg-black text-[#ff6600] py-3 flex justify-center items-center hover:bg-[#ff6600] hover:text-black transition-colors" title="Pause">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                    </button>
+                    <button id="btn-stop" class="flex-1 brutal-border-orange bg-black text-[#ff6600] py-3 flex justify-center items-center hover:bg-[#ff6600] hover:text-black transition-colors" title="Stop">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
+                    </button>
+                </div>
                 
                 <div class="flex-1 flex flex-col gap-1">
                     <label class="text-xs uppercase flex justify-between">
-                        <span>Velocidad (Rate)</span>
+                        <span>Velocidad</span>
                         <span id="rate-val">1.0x</span>
                     </label>
-                    <input type="range" id="rate-slider" min="0.5" max="2" step="0.1" value="1" class="w-full accent-[#00ff41]">
+                    <div class="relative w-full">
+                        <input type="range" id="rate-slider" min="-2" max="2" step="0.1" value="0" class="w-full accent-[#00ff41]">
+                        <div class="flex justify-between text-[9px] opacity-70 font-bold uppercase mt-1">
+                            <span>-2x</span>
+                            <span>Normal</span>
+                            <span>+2x</span>
+                        </div>
+                    </div>
                 </div>
             </div>
             
             <div class="w-full bg-black border border-[#00ff41] h-2 mt-1 relative">
                 <div id="progress-bar" class="absolute top-0 left-0 h-full bg-[#00ff41] w-0 transition-all duration-300"></div>
             </div>
+            
+            <!-- Audio oculto y en loop para forzar el reproductor nativo de iOS en la pantalla bloqueada -->
+            <audio id="bg-audio" loop playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"></audio>
         </footer>
 
     </div>
@@ -182,16 +226,33 @@
     <!-- Script Principal -->
     <script>
         /**
-         * ESTADO DE LA APLICACIÓN
+         * ESTADO Y BASE DE DATOS LOCAL
          */
-        let playlist = JSON.parse(localStorage.getItem('audioQueue_v1')) || [];
-        let currentVoice = null;
+        let playlist = JSON.parse(localStorage.getItem('audioQueue_db_v1')) || [];
+        
+        // --- AUTO-CORRECTOR DE ORDEN (Garantiza notas nuevas arriba) ---
+        playlist.sort((a, b) => {
+            const parseDateStr = (dateStr, id) => {
+                if (dateStr && dateStr.includes('/')) {
+                    const parts = dateStr.split('/');
+                    if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
+                }
+                return parseInt(id) || 0;
+            };
+            return parseDateStr(b.date, b.id) - parseDateStr(a.date, a.id);
+        });
+        localStorage.setItem('audioQueue_db_v1', JSON.stringify(playlist));
+
         let isPlaying = false;
+        let currentVoice = null;
         let currentItemIndex = -1;
         
-        // Manejo de la cola de fragmentos (chunks) para evitar el bug de iOS
+        // Manejo de la cola de fragmentos (chunks)
         let textChunks = [];
         let currentChunkIndex = 0;
+
+        // Fuentes RSS
+        let sources = JSON.parse(localStorage.getItem('audioQueue_sources_v1')) || [];
 
         // Referencias DOM
         const urlInput = document.getElementById('url-input');
@@ -200,93 +261,141 @@
         const playlistContainer = document.getElementById('playlist-container');
         const btnClear = document.getElementById('btn-clear');
         
+        const sourcesInput = document.getElementById('sources-input');
+        const btnToggleSources = document.getElementById('btn-toggle-sources');
+        const sourcesConfig = document.getElementById('sources-config');
+        const btnSync = document.getElementById('btn-sync');
+        
         const nowPlayingTitle = document.getElementById('now-playing-title');
-        const voiceIndicator = document.getElementById('voice-indicator');
-        const btnPlayPause = document.getElementById('btn-play-pause');
+        const voiceSelect = document.getElementById('voice-select');
+        const btnPlay = document.getElementById('btn-play');
+        const btnPause = document.getElementById('btn-pause');
+        const btnStop = document.getElementById('btn-stop');
         const rateSlider = document.getElementById('rate-slider');
         const rateVal = document.getElementById('rate-val');
         const progressBar = document.getElementById('progress-bar');
+        const bgAudio = document.getElementById('bg-audio');
 
         /**
-         * INICIALIZACIÓN DE VOCES (SPEECH SYNTHESIS API)
+         * INICIALIZACIÓN DE VOCES
          */
+        let availableVoices = [];
+
         function initVoices() {
-            let voices = window.speechSynthesis.getVoices();
-            if (voices.length === 0) return;
+            availableVoices = window.speechSynthesis.getVoices();
+            if (availableVoices.length === 0) return;
 
-            // Filtros de búsqueda para voces "Premium" o mejoradas, preferentemente en español
-            const isPremiumSpanish = (v) => 
-                v.lang.startsWith('es') && 
-                (v.name.includes('Premium') || v.name.includes('Enhanced') || v.name.includes('Monica') || v.name.includes('Paulina') || v.name.includes('Jorge') || v.name.includes('Google'));
+            voiceSelect.innerHTML = ''; 
 
-            const isAnySpanish = (v) => v.lang.startsWith('es');
+            const spanishVoices = availableVoices.filter(v => v.lang.startsWith('es'));
+            const voicesToShow = spanishVoices.length > 0 ? spanishVoices : availableVoices;
 
-            // 1. Intentar Premium ES
-            currentVoice = voices.find(isPremiumSpanish);
-            // 2. Fallback a cualquier ES
-            if (!currentVoice) currentVoice = voices.find(isAnySpanish);
-            // 3. Fallback absoluto
-            if (!currentVoice) currentVoice = voices[0];
+            let foundPremium = false;
 
-            if (currentVoice) {
-                let shortName = currentVoice.name.split(' ')[0].substring(0, 10);
-                voiceIndicator.innerText = `VOZ: ${shortName}`;
+            voicesToShow.forEach((voice) => {
+                const option = document.createElement('option');
+                option.value = voice.voiceURI;
+                
+                let shortName = voice.name.replace(/\s*\(.*?\)\s*/g, '');
+                option.textContent = shortName;
+                
+                const isPremium = voice.name.includes('Premium') || voice.name.includes('Enhanced') || voice.name.includes('Monica') || voice.name.includes('Paulina');
+                
+                if (!foundPremium && isPremium) {
+                    currentVoice = voice;
+                    option.selected = true;
+                    foundPremium = true;
+                }
+                
+                voiceSelect.appendChild(option);
+            });
+
+            if (!foundPremium && voicesToShow.length > 0) {
+                currentVoice = voicesToShow[0];
+                voiceSelect.options[0].selected = true;
             }
         }
 
-        // iOS y Chrome cargan las voces de forma asíncrona
+        voiceSelect.addEventListener('change', (e) => {
+            currentVoice = availableVoices.find(v => v.voiceURI === e.target.value);
+            if (isPlaying && currentItemIndex !== -1) {
+                window.speechSynthesis.cancel();
+                currentChunkIndex = Math.max(0, currentChunkIndex - 1); 
+                playCurrentChunk();
+            }
+        });
+
         window.speechSynthesis.onvoiceschanged = initVoices;
-        initVoices(); // Intento inicial
+        initVoices();
 
         /**
-         * EXTRACCIÓN DE CONTENIDO (r.jina.ai)
+         * LIMPIEZA DE TEXTO (JINA AI -> LECTURA PURA)
+         */
+        function cleanJinaText(rawText) {
+            // 1. Amputar la metadata técnica que inyecta Jina API
+            let contentStart = rawText.indexOf('Markdown Content:');
+            let baseText = contentStart !== -1 ? rawText.substring(contentStart + 17) : rawText;
+
+            return baseText
+                .replace(/Title:.*?(\n|$)/gi, '')
+                .replace(/URL Source:.*?(\n|$)/gi, '')
+                .replace(/Published Time:.*?(\n|$)/gi, '')
+                .replace(/\[.*?\]\(.*?\)/g, '') // Quitar links markdown completos
+                .replace(/[*_#`=>-\[\]]/g, ' ') // Quitar formato markdown y corchetes huérfanos
+                .replace(/(https?:\/\/[^\s]+)/g, '') // Eliminar URLs
+                .replace(/\b(Menú|Navegación|Buscar|Compartir|Search|Log in|Sign up|Suscribirse)\b/gi, '') // UI basura
+                .replace(/\b(El Cohete a la Luna|Substack|Medium)\b/gi, '') // Nombres de sitios residuales
+                .replace(/\b(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)\s+\d{1,2},?\s+\d{4}\b/gi, '') // Fechas huérfanas en cabeceras
+                .replace(/\s{2,}/g, ' ') // Reducir espacios múltiples
+                .trim();
+        }
+
+        /**
+         * EXTRACCIÓN DE CONTENIDO MANUAL (r.jina.ai)
          */
         btnIngest.addEventListener('click', async () => {
             const url = urlInput.value.trim();
             if (!url) return;
 
-            try {
-                // UI update
-                urlInput.disabled = true;
-                btnIngest.disabled = true;
-                btnIngest.innerText = "[ FETCHING... ]";
-                statusMsg.classList.remove('hidden');
-                statusMsg.innerText = ">> Consultando r.jina.ai Proxy...";
+            btnIngest.disabled = true;
+            btnIngest.innerText = "...";
+            statusMsg.classList.remove('hidden');
+            statusMsg.innerText = ">> Procesando URL...";
 
+            try {
                 const proxyUrl = `https://r.jina.ai/${url}`;
                 const response = await fetch(proxyUrl);
                 
-                if (!response.ok) throw new Error("Error en la extracción");
+                if (!response.ok) throw new Error("Fallo en la extracción. Verifica la URL.");
                 
                 const text = await response.text();
                 
-                // Procesamiento básico del texto (Jina devuelve Markdown)
-                // Usamos la primera línea no vacía como título estimado si empieza con # o es corta
-                const lines = text.split('\n').filter(l => l.trim().length > 0);
-                let title = lines[0].replace(/#/g, '').trim().substring(0, 60) + "...";
+                // Usar la metadata de Jina para sacar un título exacto antes de amputarla
+                let titleMatch = text.match(/Title:\s*(.*)/i);
+                let title = titleMatch && titleMatch[1] ? titleMatch[1].trim() : "Extracción Manual";
+                if(title.length > 60) title = title.substring(0, 60) + "...";
                 
-                // Limpieza del texto para lectura
-                let cleanText = text
-                    .replace(/\[.*?\]\(.*?\)/g, '') // Quitar links markdown
-                    .replace(/[*_#`]/g, '')         // Quitar formato markdown
-                    .replace(/(https?:\/\/[^\s]+)/g, 'enlace omitido'); // Evitar que lea URLs enteras
+                let cleanText = cleanJinaText(text);
 
-                // Crear objeto
                 const newItem = {
                     id: Date.now().toString(),
                     url: url,
                     title: title,
                     text: cleanText,
-                    status: 'Pendiente' // Pendiente, Escuchando, Leido
+                    author: 'Extracción Manual',
+                    date: new Date().toLocaleDateString('es-AR'),
+                    status: 'Pendiente'
                 };
 
-                playlist.unshift(newItem); // Agregar arriba
+                // Desplazar el puntero si estamos reproduciendo algo
+                if (currentItemIndex !== -1) currentItemIndex++;
+                
+                playlist.unshift(newItem); 
                 savePlaylist();
                 renderPlaylist();
-
-                // Reset UI
+                
                 urlInput.value = '';
-                statusMsg.innerText = ">> Extracción Exitosa.";
+                statusMsg.innerText = ">> Extracción Exitosa. Añadido a la cola.";
                 setTimeout(() => statusMsg.classList.add('hidden'), 3000);
 
             } catch (error) {
@@ -296,6 +405,99 @@
                 urlInput.disabled = false;
                 btnIngest.disabled = false;
                 btnIngest.innerText = "EXTRAER";
+            }
+        });
+
+        /**
+         * SINCRONIZACIÓN AUTOMÁTICA (RSS)
+         */
+        sourcesInput.value = sources.join('\n');
+
+        btnToggleSources.addEventListener('click', () => {
+            sourcesConfig.classList.toggle('hidden');
+            sourcesConfig.classList.toggle('flex');
+            btnToggleSources.innerText = sourcesConfig.classList.contains('hidden') ? '[Editar]' : '[Ocultar]';
+        });
+
+        sourcesInput.addEventListener('input', () => {
+            sources = sourcesInput.value.split('\n').map(s => s.trim()).filter(s => s.length > 0);
+            localStorage.setItem('audioQueue_sources_v1', JSON.stringify(sources));
+        });
+
+        btnSync.addEventListener('click', async () => {
+            if (sources.length === 0) {
+                alert(">> Configura al menos una fuente RSS primero usando el botón [Editar].");
+                return;
+            }
+
+            btnSync.disabled = true;
+            let originalText = btnSync.innerText;
+            btnSync.innerText = "[ BUSCANDO EN LA RED... ]";
+            statusMsg.classList.remove('hidden');
+
+            let newArticlesFound = 0;
+
+            try {
+                for (const feedUrl of sources) {
+                    statusMsg.innerText = `>> Leyendo feed: ${feedUrl.substring(0, 30)}...`;
+                    
+                    const rssApiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}`;
+                    const response = await fetch(rssApiUrl);
+                    if (!response.ok) continue;
+                    
+                    const data = await response.json();
+                    if (data.status !== 'ok' || !data.items) continue;
+
+                    // IMPORTANTE: .reverse() corrige el orden del lote para que la más nueva quede arriba
+                    const recentItems = data.items.slice(0, 3).reverse();
+                    
+                    for (const item of recentItems) {
+                        const itemUrl = item.link;
+                        const exists = playlist.some(p => p.url === itemUrl);
+                        
+                        if (!exists) {
+                            statusMsg.innerText = `>> Ingestando nuevo: ${item.title.substring(0, 20)}...`;
+                            
+                            const proxyUrl = `https://r.jina.ai/${itemUrl}`;
+                            const jinaRes = await fetch(proxyUrl);
+                            
+                            if (jinaRes.ok) {
+                                const text = await jinaRes.text();
+                                let cleanText = cleanJinaText(text);
+
+                                let pubDate = item.pubDate ? new Date(item.pubDate).toLocaleDateString('es-AR') : new Date().toLocaleDateString('es-AR');
+                                let authorName = item.author || 'Redacción';
+
+                                const newItem = {
+                                    id: Date.now().toString() + Math.random().toString(16).slice(2),
+                                    url: itemUrl,
+                                    title: item.title,
+                                    text: cleanText,
+                                    author: authorName,
+                                    date: pubDate,
+                                    status: 'Pendiente'
+                                };
+                                
+                                // Desplazar puntero si hay audio corriendo
+                                if (currentItemIndex !== -1) currentItemIndex++;
+                                
+                                playlist.unshift(newItem);
+                                newArticlesFound++;
+                                savePlaylist();
+                                renderPlaylist();
+                            }
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                    }
+                }
+                statusMsg.innerText = `>> Sincronización completa. ${newArticlesFound} notas nuevas añadidas.`;
+            } catch (error) {
+                console.error("Error sync:", error);
+                statusMsg.innerText = "[!] ERROR EN SINCRONIZACIÓN.";
+            } finally {
+                btnSync.disabled = false;
+                btnSync.innerText = originalText;
+                setTimeout(() => statusMsg.classList.add('hidden'), 5000);
             }
         });
 
@@ -312,19 +514,31 @@
 
             playlist.forEach((item, index) => {
                 const li = document.createElement('li');
-                li.className = `p-3 border-2 ${item.status === 'Escuchando' ? 'border-[#ff6600]' : 'border-[#00ff41]'} bg-black flex flex-col gap-2`;
+                li.className = `p-3 border-2 ${item.status === 'Escuchando' ? 'border-[#ff6600]' : 'border-[#00ff41]'} bg-black flex flex-col gap-1`;
                 
                 let statusColor = item.status === 'Leido' ? 'text-gray-500' : (item.status === 'Escuchando' ? 'text-[#ff6600]' : 'text-[#00ff41]');
+                
+                let displayAuthor = item.author || 'Fuente Web';
+                let displayDate = item.date || '--/--/----';
 
                 li.innerHTML = `
                     <div class="flex justify-between items-start">
-                        <span class="text-sm font-bold truncate pr-2" title="${item.url}">${item.title}</span>
-                        <span class="text-[10px] uppercase border px-1 ${statusColor} border-current">${item.status}</span>
+                        <span class="text-sm font-bold line-clamp-2 pr-2 leading-tight" title="${item.url}">${item.title}</span>
+                        <span class="text-[10px] uppercase border px-1 ${statusColor} border-current flex-shrink-0">${item.status}</span>
                     </div>
-                    <div class="flex justify-between items-center mt-2">
-                        <button onclick="loadAndPlay(${index})" class="text-xs bg-[#00ff41] text-black px-2 py-1 uppercase font-bold hover:bg-white transition-colors">
-                            [ Cargar ]
-                        </button>
+                    <div class="text-[9px] uppercase font-bold flex gap-3 mt-1 tracking-wider opacity-80">
+                        <span class="text-[#ff6600]">> ${displayAuthor}</span>
+                        <span>[${displayDate}]</span>
+                    </div>
+                    <div class="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-gray-800">
+                        <div class="flex gap-2">
+                            <button onclick="loadAndPlay(${index})" class="text-xs bg-[#00ff41] text-black px-3 py-1 uppercase font-bold hover:bg-white transition-colors">
+                                [ Cargar ]
+                            </button>
+                            <button onclick="copyItemText('${item.id}', this)" class="text-xs border border-[#00ff41] text-[#00ff41] px-3 py-1 uppercase font-bold hover:bg-[#00ff41] hover:text-black transition-colors">
+                                [ Copiar ]
+                            </button>
+                        </div>
                         <button onclick="deleteItem('${item.id}')" class="text-xs text-red-500 hover:text-red-400">
                             [x]
                         </button>
@@ -335,37 +549,76 @@
         }
 
         function savePlaylist() {
-            localStorage.setItem('audioQueue_v1', JSON.stringify(playlist));
+            localStorage.setItem('audioQueue_db_v1', JSON.stringify(playlist));
         }
 
-        function deleteItem(id) {
-            playlist = playlist.filter(item => item.id !== id);
+        window.deleteItem = function(id) {
+            const indexToDelete = playlist.findIndex(item => item.id === id);
+            if (indexToDelete === -1) return;
+
+            // Mantener consistencia del reproductor si borramos algo
+            if (indexToDelete === currentItemIndex) {
+                window.speechSynthesis.cancel();
+                bgAudio.pause();
+                isPlaying = false;
+                currentItemIndex = -1;
+                nowPlayingTitle.innerText = "[NO_DATA_SELECTED]";
+                updatePlayerButtons('stopped');
+                progressBar.style.width = '0%';
+            } else if (indexToDelete < currentItemIndex) {
+                currentItemIndex--;
+            }
+
+            playlist.splice(indexToDelete, 1);
             savePlaylist();
             renderPlaylist();
-        }
+        };
+
+        window.copyItemText = function(id, btnElement) {
+            const item = playlist.find(p => p.id === id);
+            if(!item) return;
+
+            // Usamos un textarea oculto para asegurar compatibilidad en iOS/Iframes
+            const textArea = document.createElement("textarea");
+            textArea.value = `${item.title}\n\n${item.text}`;
+            document.body.appendChild(textArea);
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                
+                // Feedback visual en el botón
+                const originalText = btnElement.innerText;
+                btnElement.innerText = "[ ¡COPIADO! ]";
+                btnElement.classList.add('bg-[#00ff41]', 'text-black');
+                
+                setTimeout(() => {
+                    btnElement.innerText = originalText;
+                    btnElement.classList.remove('bg-[#00ff41]', 'text-black');
+                }, 2000);
+            } catch (err) {
+                console.error('Error al copiar texto', err);
+            }
+            
+            document.body.removeChild(textArea);
+        };
 
         btnClear.addEventListener('click', () => {
-            playlist = playlist.filter(item => item.status !== 'Leido');
-            savePlaylist();
-            renderPlaylist();
+            if(confirm("¿Seguro que querés borrar todo el conocimiento acumulado?")) {
+                playlist = [];
+                savePlaylist();
+                renderPlaylist();
+            }
         });
 
         /**
          * MOTOR DE REPRODUCCIÓN (TEXT-TO-SPEECH)
          */
-
-        // Cargar un ítem específico al reproductor
         window.loadAndPlay = function(index) {
-            // Detener lectura actual
             window.speechSynthesis.cancel();
             isPlaying = false;
             
-            // Actualizar estados
-            if(currentItemIndex !== -1 && playlist[currentItemIndex]) {
-                if(playlist[currentItemIndex].status === 'Escuchando') {
-                    playlist[currentItemIndex].status = 'Pendiente'; // O 'Leido' dependiendo de la lógica que prefieras
-                }
-            }
+            playlist.forEach(p => { if(p.status === 'Escuchando') p.status = 'Pendiente' });
             
             currentItemIndex = index;
             playlist[currentItemIndex].status = 'Escuchando';
@@ -374,57 +627,103 @@
             savePlaylist();
             renderPlaylist();
 
-            // Preparar el texto (CHUNKED para iOS)
-            // iOS Safari corta el audio si el texto es muy largo. Dividimos por párrafos o frases.
             const fullText = playlist[currentItemIndex].text;
-            // Expresión regular para dividir por puntos seguidos de espacio o saltos de línea
-            textChunks = fullText.split(/(?<=\.)\s+|\n+/).filter(chunk => chunk.trim().length > 0);
+            
+            textChunks = fullText.split(/(?<=\.)\s+|\n+/).filter(chunk => {
+                return /[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9]/.test(chunk) && chunk.trim().length > 2;
+            });
+            
             currentChunkIndex = 0;
             progressBar.style.width = '0%';
 
-            // NO autocomienza la reproducción. Requiere que el usuario presione PLAY (Regla de iOS)
-            btnPlayPause.innerText = "PLAY (LISTO)";
-            btnPlayPause.classList.remove('bg-red-500');
-            btnPlayPause.classList.add('bg-[#ff6600]');
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.metadata = new MediaMetadata({
+                    title: playlist[currentItemIndex].title,
+                    artist: 'Audio-Queue PWA',
+                    album: 'Investigación y Modelos'
+                });
+            }
+
+            updatePlayerButtons('stopped');
         };
 
-        // Lógica Principal de Reproducción (El botón PLAY)
-        btnPlayPause.addEventListener('click', () => {
+        function updatePlayerButtons(state) {
+            btnPlay.classList.replace('bg-[#ff6600]', 'bg-black');
+            btnPlay.classList.replace('text-black', 'text-[#ff6600]');
+            btnPause.classList.replace('bg-[#ff6600]', 'bg-black');
+            btnPause.classList.replace('text-black', 'text-[#ff6600]');
+            btnStop.classList.replace('bg-[#ff6600]', 'bg-black');
+            btnStop.classList.replace('text-black', 'text-[#ff6600]');
+
+            if (state === 'playing') {
+                btnPlay.classList.replace('bg-black', 'bg-[#ff6600]');
+                btnPlay.classList.replace('text-[#ff6600]', 'text-black');
+            } else if (state === 'paused') {
+                btnPause.classList.replace('bg-black', 'bg-[#ff6600]');
+                btnPause.classList.replace('text-[#ff6600]', 'text-black');
+            }
+        }
+
+        function handlePlay() {
             if (currentItemIndex === -1) {
                 alert(">> Carga un artículo primero.");
                 return;
             }
+            if (isPlaying) return;
 
-            if (isPlaying) {
-                window.speechSynthesis.pause();
-                isPlaying = false;
-                btnPlayPause.innerText = "RESUME";
-                btnPlayPause.classList.replace('bg-red-500', 'bg-[#ff6600]');
+            bgAudio.play().catch(e => console.log("Permiso de audio pendiente", e));
+            
+            if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
             } else {
-                if (window.speechSynthesis.paused) {
-                    window.speechSynthesis.resume();
-                } else {
-                    // Iniciar nueva lectura del chunk actual
-                    playCurrentChunk();
-                }
-                isPlaying = true;
-                btnPlayPause.innerText = "PAUSE";
-                btnPlayPause.classList.replace('bg-[#ff6600]', 'bg-red-500');
+                playCurrentChunk();
             }
-        });
+            isPlaying = true;
+            updatePlayerButtons('playing');
+        }
+
+        function handlePause() {
+            if (!isPlaying) return;
+            window.speechSynthesis.pause();
+            bgAudio.pause();
+            isPlaying = false;
+            updatePlayerButtons('paused');
+        }
+
+        function handleStop() {
+            if (currentItemIndex === -1) return;
+            window.speechSynthesis.cancel();
+            bgAudio.pause();
+            isPlaying = false;
+            currentChunkIndex = 0;
+            progressBar.style.width = '0%';
+            updatePlayerButtons('stopped');
+            
+            btnStop.classList.replace('bg-black', 'bg-[#ff6600]');
+            btnStop.classList.replace('text-[#ff6600]', 'text-black');
+            setTimeout(() => {
+                btnStop.classList.replace('bg-[#ff6600]', 'bg-black');
+                btnStop.classList.replace('text-black', 'text-[#ff6600]');
+            }, 150);
+        }
+
+        btnPlay.addEventListener('click', handlePlay);
+        btnPause.addEventListener('click', handlePause);
+        btnStop.addEventListener('click', handleStop);
 
         function playCurrentChunk() {
             if (currentChunkIndex >= textChunks.length) {
-                // Finalizó el artículo
                 isPlaying = false;
-                btnPlayPause.innerText = "PLAY";
-                btnPlayPause.classList.replace('bg-red-500', 'bg-[#ff6600]');
+                updatePlayerButtons('stopped');
                 
                 playlist[currentItemIndex].status = 'Leido';
                 savePlaylist();
                 renderPlaylist();
-                progressBar.style.width = '100%';
-                nowPlayingTitle.innerText = "[ FIN ]";
+                
+                setTimeout(() => {
+                    alert(">> Lectura Finalizada");
+                    bgAudio.pause();
+                }, 500);
                 return;
             }
 
@@ -432,19 +731,20 @@
             const utterance = new SpeechSynthesisUtterance(chunk);
             
             if (currentVoice) utterance.voice = currentVoice;
-            utterance.rate = parseFloat(rateSlider.value);
+            
+            const sliderVal = parseFloat(rateSlider.value);
+            utterance.rate = sliderVal >= 0 ? 1 + (sliderVal / 2) : 1 + (sliderVal * 0.25);
             
             utterance.onend = () => {
                 currentChunkIndex++;
                 updateProgress();
-                // Reproducir el siguiente de inmediato
                 playCurrentChunk(); 
             };
 
             utterance.onerror = (e) => {
                 console.error("Error TTS:", e);
                 isPlaying = false;
-                btnPlayPause.innerText = "ERROR";
+                updatePlayerButtons('stopped');
             };
 
             window.speechSynthesis.speak(utterance);
@@ -456,10 +756,17 @@
             progressBar.style.width = `${percentage}%`;
         }
 
-        // Actualizar slider
         rateSlider.addEventListener('input', (e) => {
-            rateVal.innerText = `${e.target.value}x`;
+            const sliderVal = parseFloat(e.target.value);
+            const actualRate = sliderVal >= 0 ? 1 + (sliderVal / 2) : 1 + (sliderVal * 0.25);
+            rateVal.innerText = `${actualRate.toFixed(1)}x`;
         });
+
+        if ('mediaSession' in navigator) {
+            navigator.mediaSession.setActionHandler('play', handlePlay);
+            navigator.mediaSession.setActionHandler('pause', handlePause);
+            navigator.mediaSession.setActionHandler('stop', handleStop);
+        }
 
         // Init UI
         renderPlaylist();
