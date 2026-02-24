@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-theme="brutal">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -9,69 +9,122 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Audio-Queue">
     
-    <!-- Íconos de App (Generados dinámicamente) -->
+    <!-- Íconos de App -->
     <link rel="apple-touch-icon" href="https://ui-avatars.com/api/?name=AQ&background=050505&color=00ff41&size=512&font-size=0.4&bold=true">
     <link rel="icon" type="image/png" href="https://ui-avatars.com/api/?name=AQ&background=050505&color=00ff41&size=512&font-size=0.4&bold=true">
 
     <title>Audio-Queue [PWA]</title>
     
-    <!-- Tailwind CSS -->
+    <!-- Tailwind CSS con Configuración Dinámica de Variables -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        base: 'var(--bg-base)',
+                        panel: 'var(--bg-panel)',
+                        main: 'var(--text-main)',
+                        accent: 'var(--accent)',
+                        danger: 'var(--danger)',
+                        borderMain: 'var(--border-main)'
+                    }
+                }
+            }
+        }
+    </script>
 
-    <!-- Google Fonts: JetBrains Mono -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
 
     <style>
-        /* Configuraciones Brutalistas y The Vibe */
-        :root {
-            --neon-green: #00ff41;
-            --neon-orange: #ff6600;
-            --bg-black: #050505;
+        /* =========================================================
+           SISTEMA DE SKINS (CARCASAS)
+           ========================================================= */
+        
+        /* 1. SKIN BRUTALISTA (Por Defecto) */
+        :root, [data-theme="brutal"] {
+            --bg-base: #050505;
+            --bg-panel: #000000;
+            --text-main: #00ff41;
+            --text-muted: rgba(0, 255, 65, 0.6);
+            --accent: #00ff41;
+            --danger: #ff6600;
+            --border-main: #00ff41;
+            --border-danger: #ff6600;
+            --font-sys: 'JetBrains Mono', monospace;
+            --ui-shadow: 4px 4px 0px var(--accent);
+            --ui-shadow-danger: 3px 3px 0px var(--danger);
+            --radius: 0px;
+            --slider-track: #333333;
         }
+
+        /* 2. SKIN RETRO 70s (Grabador de Cinta) */
+        [data-theme="retro"] {
+            --bg-base: #e6e2d3; /* Plástico beige marfil */
+            --bg-panel: #d6d1c0; /* Plástico oscurecido para fondos */
+            --text-main: #2b2b2b; /* Tinta negra/gris oscura */
+            --text-muted: rgba(43, 43, 43, 0.6);
+            --accent: #b22222; /* Rojo grabación analógico */
+            --danger: #5c4033; /* Marrón tipo madera/cuero */
+            --border-main: #2b2b2b;
+            --border-danger: #5c4033;
+            --font-sys: 'Courier New', Courier, monospace;
+            --ui-shadow: 2px 2px 0px rgba(0,0,0,0.3);
+            --ui-shadow-danger: 2px 2px 0px rgba(0,0,0,0.3);
+            --radius: 6px;
+            --slider-track: #a9a9a9;
+        }
+
+        /* Aplicación Global de Variables */
         body {
-            background-color: var(--bg-black);
-            color: var(--neon-green);
-            font-family: 'JetBrains Mono', monospace;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            font-family: var(--font-sys);
             -webkit-font-smoothing: antialiased;
-            overscroll-behavior-y: none; /* Evita el "rebote" en iOS */
+            overscroll-behavior-y: none;
+            transition: background-color 0.3s, color 0.3s;
         }
         
         .brutal-border {
-            border: 2px solid var(--neon-green);
-            box-shadow: 4px 4px 0px var(--neon-green);
+            border: 2px solid var(--border-main);
+            box-shadow: var(--ui-shadow);
+            border-radius: var(--radius);
+            transition: all 0.2s;
         }
         
         .brutal-border-orange {
-            border: 2px solid var(--neon-orange);
-            box-shadow: 3px 3px 0px var(--neon-orange);
+            border: 2px solid var(--border-danger);
+            box-shadow: var(--ui-shadow-danger);
+            border-radius: var(--radius);
+            transition: all 0.2s;
         }
 
         .brutal-input {
-            background-color: black;
-            border: 2px solid var(--neon-green);
-            color: white;
+            background-color: var(--bg-panel);
+            border: 2px solid var(--border-main);
+            color: var(--text-main);
+            border-radius: var(--radius);
             outline: none;
+            transition: all 0.2s;
         }
         
         .brutal-input:focus {
-            border-color: white;
-            box-shadow: 4px 4px 0px white;
+            box-shadow: var(--ui-shadow);
         }
 
-        /* Ocultar scrollbar pero permitir scroll */
         ::-webkit-scrollbar {
             width: 0px;
             background: transparent;
         }
 
-        /* Layout para PWA en iOS (respeta el notch/dynamic island) */
         #app-container {
             padding-top: env(safe-area-inset-top);
             padding-bottom: env(safe-area-inset-bottom);
-            height: 100vh; /* Fallback navegadores viejos */
-            height: 100dvh; /* Fix definitivo para la barra de Safari en iOS */
+            height: 100vh; 
+            height: 100dvh; 
             display: flex;
             flex-direction: column;
         }
@@ -82,11 +135,12 @@
         }
 
         #player-container {
-            border-top: 4px solid var(--neon-green);
-            background-color: #000;
+            border-top: 4px solid var(--border-main);
+            background-color: var(--bg-panel);
+            transition: background-color 0.3s;
         }
         
-        /* Modificar el slider nativo */
+        /* Sliders Adaptativos */
         input[type=range] {
             -webkit-appearance: none;
             background: transparent;
@@ -95,20 +149,24 @@
             -webkit-appearance: none;
             height: 16px;
             width: 16px;
-            background: var(--neon-green);
+            background: var(--accent);
             cursor: pointer;
             margin-top: -6px;
-            border-radius: 0;
+            border-radius: var(--radius);
         }
         input[type=range]::-webkit-slider-runnable-track {
             width: 100%;
             height: 4px;
             cursor: pointer;
-            background: #333;
+            background: var(--slider-track);
+        }
+        input[type=range]:disabled::-webkit-slider-thumb {
+            background: #888;
+            cursor: not-allowed;
         }
     </style>
 </head>
-<body class="selection:bg-[#00ff41] selection:text-black">
+<body class="selection:bg-accent selection:text-base">
 
     <div id="app-container">
         
@@ -116,13 +174,18 @@
         <div id="scroll-area" class="p-4 flex flex-col gap-6">
             
             <!-- Header -->
-            <header class="flex justify-between items-end border-b-4 border-[#00ff41] pb-2">
+            <header class="flex justify-between items-end border-b-4 border-borderMain pb-2">
                 <div>
                     <h1 class="text-2xl font-extrabold uppercase tracking-tighter leading-none">AUDIO<br>QUEUE</h1>
                 </div>
-                <div class="text-right text-[10px] uppercase font-bold opacity-80">
-                    <p>Soberanía_Local</p>
-                    <p>v1.7.0 (Safari Puro)</p>
+                <div class="text-right flex flex-col items-end gap-1">
+                    <button id="btn-theme" class="text-[9px] uppercase font-bold border border-borderMain px-1 bg-panel hover:bg-main hover:text-base transition-colors cursor-pointer">
+                        [ SKIN: BRUTAL ]
+                    </button>
+                    <div class="text-[10px] uppercase font-bold opacity-80 mt-1">
+                        <p>Soberanía_Local</p>
+                        <p>v1.9.0</p>
+                    </div>
                 </div>
             </header>
 
@@ -131,18 +194,18 @@
                 <label class="text-sm font-bold uppercase">> Ingesta_Manual (URL):</label>
                 <div class="flex gap-2 h-12">
                     <input type="url" id="url-input" placeholder="https://..." class="brutal-input flex-1 px-3 text-sm" autocomplete="off">
-                    <button id="btn-ingest" class="brutal-border bg-[#00ff41] text-black px-4 font-extrabold uppercase hover:bg-black hover:text-[#00ff41] transition-colors">
+                    <button id="btn-ingest" class="brutal-border bg-accent text-base px-4 font-extrabold uppercase hover:opacity-80 transition-opacity">
                         Extraer
                     </button>
                 </div>
-                <div id="status-msg" class="text-xs hidden text-[#ff6600] font-bold"></div>
+                <div id="status-msg" class="text-xs hidden text-danger font-bold"></div>
             </section>
 
             <!-- Fuentes RSS Automáticas -->
-            <section class="flex flex-col gap-3 border-t-2 border-dashed border-[#00ff41] pt-4">
+            <section class="flex flex-col gap-3 border-t-2 border-dashed border-borderMain pt-4">
                 <div class="flex justify-between items-center">
                     <label class="text-sm font-bold uppercase">> Fuentes_RSS_Automáticas:</label>
-                    <button id="btn-toggle-sources" class="text-xs uppercase text-[#00ff41] hover:text-white">[Editar]</button>
+                    <button id="btn-toggle-sources" class="text-xs uppercase text-accent hover:opacity-70">[Editar]</button>
                 </div>
                 
                 <div id="sources-config" class="hidden flex-col gap-2">
@@ -150,7 +213,7 @@
                     <p class="text-[9px] opacity-70">// Pegá links RSS de Substacks, Medium o blogs periodísticos.</p>
                 </div>
                 
-                <button id="btn-sync" class="brutal-border bg-[#00ff41] text-black px-4 py-3 font-extrabold uppercase hover:bg-black hover:text-[#00ff41] transition-colors shadow-none text-sm tracking-widest">
+                <button id="btn-sync" class="brutal-border bg-accent text-base px-4 py-3 font-extrabold uppercase hover:opacity-80 transition-opacity shadow-none text-sm tracking-widest">
                     [ Sincronizar Novedades ]
                 </button>
             </section>
@@ -159,7 +222,7 @@
             <section class="flex flex-col gap-3">
                 <div class="flex justify-between items-end">
                     <label class="text-sm font-bold uppercase">> Cola_de_Lectura:</label>
-                    <button id="btn-clear" class="text-xs text-red-500 hover:text-red-400 uppercase">[Purgar]</button>
+                    <button id="btn-clear" class="text-xs text-danger hover:opacity-70 uppercase">[Purgar]</button>
                 </div>
                 
                 <ul id="playlist-container" class="flex flex-col gap-3">
@@ -177,8 +240,8 @@
                 <div class="truncate pr-4 text-sm font-bold" id="now-playing-title">
                     [NO_DATA_SELECTED]
                 </div>
-                <div class="text-xs border border-[#00ff41] bg-black text-[#00ff41]">
-                    <select id="voice-select" class="bg-black text-[#00ff41] outline-none max-w-[130px] truncate p-1 cursor-pointer font-bold uppercase appearance-none">
+                <div class="text-xs border border-borderMain bg-panel text-main rounded-[var(--radius)]">
+                    <select id="voice-select" class="bg-panel text-main outline-none max-w-[130px] truncate p-1 cursor-pointer font-bold uppercase appearance-none rounded-[var(--radius)]">
                         <option value="">VOZ: --</option>
                     </select>
                 </div>
@@ -187,13 +250,13 @@
             <div class="flex items-center gap-4">
                 <!-- Botonera tipo grabador -->
                 <div class="flex gap-2 w-1/3">
-                    <button id="btn-play" class="flex-1 brutal-border-orange bg-black text-[#ff6600] py-3 flex justify-center items-center hover:bg-[#ff6600] hover:text-black transition-colors" title="Play">
+                    <button id="btn-play" class="flex-1 brutal-border-orange bg-panel text-danger py-3 flex justify-center items-center hover:opacity-80 transition-colors" title="Play">
                         <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                     </button>
-                    <button id="btn-pause" class="flex-1 brutal-border-orange bg-black text-[#ff6600] py-3 flex justify-center items-center hover:bg-[#ff6600] hover:text-black transition-colors" title="Pause">
+                    <button id="btn-pause" class="flex-1 brutal-border-orange bg-panel text-danger py-3 flex justify-center items-center hover:opacity-80 transition-colors" title="Pause">
                         <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
                     </button>
-                    <button id="btn-stop" class="flex-1 brutal-border-orange bg-black text-[#ff6600] py-3 flex justify-center items-center hover:bg-[#ff6600] hover:text-black transition-colors" title="Stop">
+                    <button id="btn-stop" class="flex-1 brutal-border-orange bg-panel text-danger py-3 flex justify-center items-center hover:opacity-80 transition-colors" title="Stop">
                         <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
                     </button>
                 </div>
@@ -204,7 +267,7 @@
                         <span id="rate-val">1.0x</span>
                     </label>
                     <div class="relative w-full">
-                        <input type="range" id="rate-slider" min="-2" max="2" step="0.1" value="0" class="w-full accent-[#00ff41]">
+                        <input type="range" id="rate-slider" min="-2" max="2" step="0.1" value="0" class="w-full">
                         <div class="flex justify-between text-[9px] opacity-70 font-bold uppercase mt-1">
                             <span>-2x</span>
                             <span>Normal</span>
@@ -214,12 +277,12 @@
                 </div>
             </div>
             
-            <div class="w-full bg-black border border-[#00ff41] h-2 mt-1 relative">
-                <div id="progress-bar" class="absolute top-0 left-0 h-full bg-[#00ff41] w-0 transition-all duration-300"></div>
+            <!-- Timeline de Progreso Interactivo -->
+            <div class="w-full mt-4 relative flex items-center">
+                <input type="range" id="progress-slider" min="0" max="100" step="0.1" value="0" class="w-full" disabled>
             </div>
             
-            <!-- Audio oculto y en loop para forzar el reproductor nativo de iOS en la pantalla bloqueada -->
-            <!-- Ahora tiene un archivo un poco más largo para garantizar el latido constante -->
+            <!-- Audio oculto y en loop -->
             <audio id="bg-audio" loop playsinline src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA"></audio>
         </footer>
 
@@ -227,6 +290,23 @@
 
     <!-- Script Principal -->
     <script>
+        // --- MANEJO DEL TEMA VISUAL (SKINS) ---
+        const btnTheme = document.getElementById('btn-theme');
+        let currentTheme = localStorage.getItem('audioQueue_theme') || 'brutal';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        updateThemeBtnLabel();
+
+        btnTheme.addEventListener('click', () => {
+            currentTheme = currentTheme === 'brutal' ? 'retro' : 'brutal';
+            document.documentElement.setAttribute('data-theme', currentTheme);
+            localStorage.setItem('audioQueue_theme', currentTheme);
+            updateThemeBtnLabel();
+        });
+
+        function updateThemeBtnLabel() {
+            btnTheme.innerText = currentTheme === 'brutal' ? '[ SKIN: BRUTAL ]' : '[ SKIN: 70s REC ]';
+        }
+
         /**
          * ESTADO Y BASE DE DATOS LOCAL
          */
@@ -252,6 +332,7 @@
         // --- VARIABLES DEL MOTOR ---
         let fullText = "";
         let currentCharIndex = 0;
+        let isDraggingProgress = false; 
 
         // Fuentes RSS
         let sources = JSON.parse(localStorage.getItem('audioQueue_sources_v1')) || [];
@@ -275,7 +356,7 @@
         const btnStop = document.getElementById('btn-stop');
         const rateSlider = document.getElementById('rate-slider');
         const rateVal = document.getElementById('rate-val');
-        const progressBar = document.getElementById('progress-bar');
+        const progressSlider = document.getElementById('progress-slider');
         const bgAudio = document.getElementById('bg-audio');
 
         /**
@@ -292,7 +373,6 @@
             const spanishVoices = availableVoices.filter(v => v.lang.startsWith('es'));
             const voicesToShow = spanishVoices.length > 0 ? spanishVoices : availableVoices;
 
-            // Búsqueda obsesiva de Mónica Enhanced/Premium
             let bestVoice = voicesToShow.find(v => v.name.includes('Monica') && (v.name.includes('Enhanced') || v.name.includes('Premium')));
             if (!bestVoice) bestVoice = voicesToShow.find(v => v.name.includes('Monica'));
             if (!bestVoice) bestVoice = voicesToShow.find(v => v.name.includes('Paulina') && (v.name.includes('Enhanced') || v.name.includes('Premium')));
@@ -319,7 +399,7 @@
             currentVoice = availableVoices.find(v => v.voiceURI === e.target.value);
             if (isPlaying && currentItemIndex !== -1) {
                 window.speechSynthesis.cancel();
-                playFromCurrentIndex(); // Reinicia con la nueva voz desde donde se quedó
+                playFromCurrentIndex(); 
             }
         });
 
@@ -501,15 +581,15 @@
             playlistContainer.innerHTML = '';
             
             if(playlist.length === 0) {
-                playlistContainer.innerHTML = `<li class="text-xs opacity-50 border border-dashed border-[#00ff41] p-4 text-center">No hay datos en la cola.</li>`;
+                playlistContainer.innerHTML = `<li class="text-xs opacity-50 border border-dashed border-borderMain p-4 text-center">No hay datos en la cola.</li>`;
                 return;
             }
 
             playlist.forEach((item, index) => {
                 const li = document.createElement('li');
-                li.className = `p-3 border-2 ${item.status === 'Escuchando' ? 'border-[#ff6600]' : 'border-[#00ff41]'} bg-black flex flex-col gap-1`;
+                li.className = `p-3 border-2 ${item.status === 'Escuchando' ? 'border-danger' : 'border-borderMain'} bg-panel flex flex-col gap-1 rounded-[var(--radius)]`;
                 
-                let statusColor = item.status === 'Leido' ? 'text-gray-500' : (item.status === 'Escuchando' ? 'text-[#ff6600]' : 'text-[#00ff41]');
+                let statusColor = item.status === 'Leido' ? 'opacity-50' : (item.status === 'Escuchando' ? 'text-danger' : 'text-accent');
                 
                 let displayAuthor = item.author || 'Fuente Web';
                 let displayDate = item.date || '--/--/----';
@@ -517,22 +597,22 @@
                 li.innerHTML = `
                     <div class="flex justify-between items-start">
                         <span class="text-sm font-bold line-clamp-2 pr-2 leading-tight" title="${item.url}">${item.title}</span>
-                        <span class="text-[10px] uppercase border px-1 ${statusColor} border-current flex-shrink-0">${item.status}</span>
+                        <span class="text-[10px] uppercase border px-1 ${statusColor} border-current flex-shrink-0 rounded-sm">${item.status}</span>
                     </div>
                     <div class="text-[9px] uppercase font-bold flex gap-3 mt-1 tracking-wider opacity-80">
-                        <span class="text-[#ff6600]">> ${displayAuthor}</span>
+                        <span class="text-danger">> ${displayAuthor}</span>
                         <span>[${displayDate}]</span>
                     </div>
-                    <div class="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-gray-800">
+                    <div class="flex justify-between items-center mt-2 pt-2 border-t border-dashed border-borderMain">
                         <div class="flex gap-2">
-                            <button onclick="loadAndPlay(${index})" class="text-xs bg-[#00ff41] text-black px-3 py-1 uppercase font-bold hover:bg-white transition-colors">
+                            <button onclick="loadAndPlay(${index})" class="text-xs bg-accent text-base px-3 py-1 uppercase font-bold hover:opacity-80 transition-colors rounded-[calc(var(--radius)/2)]">
                                 [ Cargar ]
                             </button>
-                            <button onclick="copyItemText('${item.id}', this)" class="text-xs border border-[#00ff41] text-[#00ff41] px-3 py-1 uppercase font-bold hover:bg-[#00ff41] hover:text-black transition-colors">
+                            <button onclick="copyItemText('${item.id}', this)" class="text-xs border border-borderMain text-main px-3 py-1 uppercase font-bold hover:bg-main hover:text-base transition-colors rounded-[calc(var(--radius)/2)]">
                                 [ Copiar ]
                             </button>
                         </div>
-                        <button onclick="deleteItem('${item.id}')" class="text-xs text-red-500 hover:text-red-400">
+                        <button onclick="deleteItem('${item.id}')" class="text-xs text-danger hover:opacity-70">
                             [x]
                         </button>
                     </div>
@@ -556,7 +636,8 @@
                 currentItemIndex = -1;
                 nowPlayingTitle.innerText = "[NO_DATA_SELECTED]";
                 updatePlayerButtons('stopped');
-                progressBar.style.width = '0%';
+                progressSlider.value = 0;
+                progressSlider.disabled = true;
             } else if (indexToDelete < currentItemIndex) {
                 currentItemIndex--;
             }
@@ -579,10 +660,10 @@
                 document.execCommand('copy');
                 const originalText = btnElement.innerText;
                 btnElement.innerText = "[ ¡COPIADO! ]";
-                btnElement.classList.add('bg-[#00ff41]', 'text-black');
+                btnElement.classList.add('bg-accent', 'text-base');
                 setTimeout(() => {
                     btnElement.innerText = originalText;
-                    btnElement.classList.remove('bg-[#00ff41]', 'text-black');
+                    btnElement.classList.remove('bg-accent', 'text-base');
                 }, 2000);
             } catch (err) {
                 console.error('Error al copiar texto', err);
@@ -615,7 +696,8 @@
 
             fullText = playlist[currentItemIndex].text;
             currentCharIndex = 0;
-            progressBar.style.width = '0%';
+            progressSlider.value = 0;
+            progressSlider.disabled = false;
 
             if ('mediaSession' in navigator) {
                 navigator.mediaSession.metadata = new MediaMetadata({
@@ -629,19 +711,19 @@
         };
 
         function updatePlayerButtons(state) {
-            btnPlay.classList.replace('bg-[#ff6600]', 'bg-black');
-            btnPlay.classList.replace('text-black', 'text-[#ff6600]');
-            btnPause.classList.replace('bg-[#ff6600]', 'bg-black');
-            btnPause.classList.replace('text-black', 'text-[#ff6600]');
-            btnStop.classList.replace('bg-[#ff6600]', 'bg-black');
-            btnStop.classList.replace('text-black', 'text-[#ff6600]');
+            btnPlay.classList.replace('bg-danger', 'bg-panel');
+            btnPlay.classList.replace('text-panel', 'text-danger');
+            btnPause.classList.replace('bg-danger', 'bg-panel');
+            btnPause.classList.replace('text-panel', 'text-danger');
+            btnStop.classList.replace('bg-danger', 'bg-panel');
+            btnStop.classList.replace('text-panel', 'text-danger');
 
             if (state === 'playing') {
-                btnPlay.classList.replace('bg-black', 'bg-[#ff6600]');
-                btnPlay.classList.replace('text-[#ff6600]', 'text-black');
+                btnPlay.classList.replace('bg-panel', 'bg-danger');
+                btnPlay.classList.replace('text-danger', 'text-panel');
             } else if (state === 'paused') {
-                btnPause.classList.replace('bg-black', 'bg-[#ff6600]');
-                btnPause.classList.replace('text-[#ff6600]', 'text-black');
+                btnPause.classList.replace('bg-panel', 'bg-danger');
+                btnPause.classList.replace('text-danger', 'text-panel');
             }
         }
 
@@ -673,14 +755,14 @@
             window.speechSynthesis.cancel();
             bgAudio.pause();
             currentCharIndex = 0;
-            progressBar.style.width = '0%';
+            progressSlider.value = 0;
             updatePlayerButtons('stopped');
             
-            btnStop.classList.replace('bg-black', 'bg-[#ff6600]');
-            btnStop.classList.replace('text-[#ff6600]', 'text-black');
+            btnStop.classList.replace('bg-panel', 'bg-danger');
+            btnStop.classList.replace('text-danger', 'text-panel');
             setTimeout(() => {
-                btnStop.classList.replace('bg-[#ff6600]', 'bg-black');
-                btnStop.classList.replace('text-black', 'text-[#ff6600]');
+                btnStop.classList.replace('bg-danger', 'bg-panel');
+                btnStop.classList.replace('text-panel', 'text-danger');
             }, 150);
         }
 
@@ -705,9 +787,11 @@
             const startIndexForThisRun = currentCharIndex;
 
             utterance.onboundary = (e) => {
-                currentCharIndex = startIndexForThisRun + e.charIndex;
-                const percentage = (currentCharIndex / fullText.length) * 100;
-                progressBar.style.width = `${percentage}%`;
+                if (!isDraggingProgress) {
+                    currentCharIndex = startIndexForThisRun + e.charIndex;
+                    const percentage = (currentCharIndex / fullText.length) * 100;
+                    progressSlider.value = percentage;
+                }
             };
 
             utterance.onend = () => { if (isPlaying) handleFinish(); };
@@ -745,6 +829,31 @@
 
         rateSlider.addEventListener('change', (e) => {
             if (isPlaying && currentItemIndex !== -1) {
+                window.speechSynthesis.cancel();
+                playFromCurrentIndex();
+            }
+        });
+
+        // --- CEREBRO DEL TIMELINE INTERACTIVO ---
+        
+        progressSlider.addEventListener('input', () => {
+            isDraggingProgress = true;
+        });
+
+        progressSlider.addEventListener('change', (e) => {
+            isDraggingProgress = false;
+            if (currentItemIndex === -1 || fullText.length === 0) return;
+
+            const percentage = parseFloat(e.target.value);
+            let targetIndex = Math.floor((percentage / 100) * fullText.length);
+
+            while (targetIndex > 0 && !/\s/.test(fullText[targetIndex - 1])) {
+                targetIndex--;
+            }
+
+            currentCharIndex = targetIndex;
+
+            if (isPlaying) {
                 window.speechSynthesis.cancel();
                 playFromCurrentIndex();
             }
