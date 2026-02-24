@@ -122,7 +122,7 @@
                 </div>
                 <div class="text-right text-[10px] uppercase font-bold opacity-80">
                     <p>Soberanía_Local</p>
-                    <p>v1.6.0 (Marcapasos)</p>
+                    <p>v1.7.0 (Safari Puro)</p>
                 </div>
             </header>
 
@@ -252,8 +252,6 @@
         // --- VARIABLES DEL MOTOR ---
         let fullText = "";
         let currentCharIndex = 0;
-        let lastPulse = Date.now();
-        let isSpeakingInternal = false;
 
         // Fuentes RSS
         let sources = JSON.parse(localStorage.getItem('audioQueue_sources_v1')) || [];
@@ -294,7 +292,12 @@
             const spanishVoices = availableVoices.filter(v => v.lang.startsWith('es'));
             const voicesToShow = spanishVoices.length > 0 ? spanishVoices : availableVoices;
 
-            let foundPremium = false;
+            // Búsqueda obsesiva de Mónica Enhanced/Premium
+            let bestVoice = voicesToShow.find(v => v.name.includes('Monica') && (v.name.includes('Enhanced') || v.name.includes('Premium')));
+            if (!bestVoice) bestVoice = voicesToShow.find(v => v.name.includes('Monica'));
+            if (!bestVoice) bestVoice = voicesToShow.find(v => v.name.includes('Paulina') && (v.name.includes('Enhanced') || v.name.includes('Premium')));
+            if (!bestVoice) bestVoice = voicesToShow.find(v => v.name.includes('Premium') || v.name.includes('Enhanced'));
+            if (!bestVoice) bestVoice = voicesToShow[0];
 
             voicesToShow.forEach((voice) => {
                 const option = document.createElement('option');
@@ -303,21 +306,13 @@
                 let shortName = voice.name.replace(/\s*\(.*?\)\s*/g, '');
                 option.textContent = shortName;
                 
-                const isPremium = voice.name.includes('Premium') || voice.name.includes('Enhanced') || voice.name.includes('Monica') || voice.name.includes('Paulina');
-                
-                if (!foundPremium && isPremium) {
+                if (bestVoice && voice.voiceURI === bestVoice.voiceURI) {
                     currentVoice = voice;
                     option.selected = true;
-                    foundPremium = true;
                 }
                 
                 voiceSelect.appendChild(option);
             });
-
-            if (!foundPremium && voicesToShow.length > 0) {
-                currentVoice = voicesToShow[0];
-                voiceSelect.options[0].selected = true;
-            }
         }
 
         voiceSelect.addEventListener('change', (e) => {
@@ -715,53 +710,16 @@
                 progressBar.style.width = `${percentage}%`;
             };
 
-            utterance.onstart = () => { isSpeakingInternal = true; };
-            utterance.onend = () => { isSpeakingInternal = false; if (isPlaying) handleFinish(); };
+            utterance.onend = () => { if (isPlaying) handleFinish(); };
             
             utterance.onerror = (e) => {
-                isSpeakingInternal = false;
                 if(e.error !== 'canceled' && e.error !== 'interrupted') {
                     console.error("Error TTS:", e);
                 }
             };
 
             window.speechSynthesis.speak(utterance);
-            lastPulse = Date.now();
         }
-
-        // ------------------------------------------------------------------------
-        // TÁCTICA DE GUERRILLA DIGITAL: EL MARCAPASOS Y EL RESUCITADOR DE APPLE
-        // ------------------------------------------------------------------------
-        // En lugar de usar la web (que Apple apaga), usamos el hardware de audio 
-        // de fondo del iPhone para mantener el script vivo.
-        
-        bgAudio.addEventListener('timeupdate', () => {
-            if (!isPlaying) return;
-            
-            const now = Date.now();
-            
-            // 1. EL RESUCITADOR: 
-            // Si Apple nos asesina el proceso de voz por estar en segundo plano,
-            // pero nosotros sabemos que deberíamos estar "Playing", lo revivimos.
-            if (!window.speechSynthesis.speaking && !isSpeakingInternal) {
-                console.log(">> Resucitando proceso de lectura...");
-                window.speechSynthesis.cancel(); // Limpiar buffers muertos
-                playFromCurrentIndex(); // Volver a inyectar el texto
-                return;
-            }
-
-            // 2. EL MARCAPASOS:
-            // Cada 12 segundos exactos, le damos un micro-shock al motor para
-            // resetear el temporizador de muerte de iOS.
-            if (now - lastPulse > 12000) {
-                lastPulse = now;
-                if (window.speechSynthesis.speaking) {
-                    window.speechSynthesis.pause();
-                    window.speechSynthesis.resume();
-                }
-            }
-        });
-        // ------------------------------------------------------------------------
 
         function handleFinish() {
             isPlaying = false;
