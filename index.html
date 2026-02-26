@@ -174,7 +174,7 @@
                     </button>
                     <div class="text-[10px] uppercase font-bold opacity-80 mt-1">
                         <p>Soberanía_Local</p>
-                        <p>v1.15.0 (Cebo Fonético)</p>
+                        <p>v1.16.0 (Válvula Fonética)</p>
                     </div>
                 </div>
             </header>
@@ -710,10 +710,11 @@
                 return;
             }
 
-            // TÁCTICA ANTI-CLIPPING: EL CEBO FONÉTICO
-            // Inyectamos 5 caracteres silenciosos al principio. El hardware se despierta 
-            // "leyendo" el vacío y está listo para pronunciar la primera palabra real.
-            const warmup = " . . "; 
+            // TÁCTICA ANTI-CLIPPING: LA VÁLVULA DE RETENCIÓN
+            // Las comas obligan a la voz neuronal a generar una pausa prosódica
+            // de casi 1 segundo (puro silencio activo). Esto le da tiempo de sobra 
+            // al hardware de iOS para abrir el canal de audio antes de la primera letra.
+            const warmup = ", , , , , "; 
             const realText = fullText.substring(currentCharIndex);
             const textToRead = warmup + realText;
             
@@ -727,9 +728,9 @@
 
             utterance.onboundary = (e) => {
                 if (!isDraggingProgress) {
-                    // Restamos la longitud del cebo para que el progreso coincida con el texto real
+                    // Restamos la longitud de la válvula para que la barra de progreso sea matemáticamente exacta
                     let adjustedIndex = e.charIndex - warmup.length;
-                    if (adjustedIndex < 0) return; // Si está leyendo el cebo, no hacemos nada
+                    if (adjustedIndex < 0) return; // Mientras lee las comas invisibles, no movemos la barra
                     
                     currentCharIndex = startIndexForThisRun + adjustedIndex;
                     const percentage = (currentCharIndex / fullText.length) * 100;
