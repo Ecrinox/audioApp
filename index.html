@@ -40,9 +40,6 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
 
     <style>
-        /* =========================================================
-           SISTEMA DE SKINS (CARCASAS)
-           ========================================================= */
         :root, [data-theme="brutal"] {
             --bg-base: #050505;
             --bg-panel: #000000;
@@ -136,7 +133,6 @@
             transition: background-color 0.3s;
         }
         
-        /* Sliders */
         input[type=range] {
             -webkit-appearance: none;
             background: transparent;
@@ -168,7 +164,6 @@
         
         <div id="scroll-area" class="p-4 flex flex-col gap-6">
             
-            <!-- Header -->
             <header class="flex justify-between items-end border-b-4 border-borderMain pb-2">
                 <div>
                     <h1 class="text-2xl font-extrabold uppercase tracking-tighter leading-none">AUDIO<br>QUEUE</h1>
@@ -179,12 +174,11 @@
                     </button>
                     <div class="text-[10px] uppercase font-bold opacity-80 mt-1">
                         <p>Soberanía_Local</p>
-                        <p>v1.13.0 (Origen Puro)</p>
+                        <p>v1.15.0 (Cebo Fonético)</p>
                     </div>
                 </div>
             </header>
 
-            <!-- Ingesta Manual -->
             <section class="flex flex-col gap-3">
                 <label class="text-sm font-bold uppercase">> Ingesta_Manual (URL):</label>
                 <div class="flex gap-2 h-12">
@@ -196,7 +190,6 @@
                 <div id="status-msg" class="text-xs hidden text-danger font-bold"></div>
             </section>
 
-            <!-- Fuentes RSS Automáticas -->
             <section class="flex flex-col gap-3 border-t-2 border-dashed border-borderMain pt-4">
                 <div class="flex justify-between items-center">
                     <label class="text-sm font-bold uppercase">> Fuentes_RSS_Automáticas:</label>
@@ -205,7 +198,6 @@
                 
                 <div id="sources-config" class="hidden flex-col gap-2">
                     <textarea id="sources-input" rows="3" placeholder="https://ejemplo.com/feed&#10;Una URL por línea..." class="brutal-input p-2 text-xs w-full leading-tight font-mono"></textarea>
-                    <p class="text-[9px] opacity-70">// Pegá links RSS de Substacks, Medium o blogs periodísticos.</p>
                 </div>
                 
                 <button id="btn-sync" class="brutal-border bg-accent text-base px-4 py-3 font-extrabold uppercase hover:opacity-80 transition-opacity shadow-none text-sm tracking-widest">
@@ -213,7 +205,6 @@
                 </button>
             </section>
 
-            <!-- Playlist -->
             <section class="flex flex-col gap-3">
                 <div class="flex justify-between items-end">
                     <label class="text-sm font-bold uppercase">> Cola_de_Lectura:</label>
@@ -221,14 +212,13 @@
                 </div>
                 
                 <ul id="playlist-container" class="flex flex-col gap-3">
-                    <!-- Los items se inyectan acá vía JS -->
+                    <!-- Items inyectados vía JS -->
                 </ul>
             </section>
             
             <div class="h-24"></div>
         </div>
 
-        <!-- Reproductor Fijo -->
         <footer id="player-container" class="p-4 flex flex-col gap-3">
             <div class="flex justify-between items-center">
                 <div class="truncate pr-4 text-sm font-bold" id="now-playing-title">
@@ -242,7 +232,6 @@
             </div>
             
             <div class="flex items-center gap-4">
-                <!-- Botonera tipo grabador -->
                 <div class="flex gap-2 w-1/3">
                     <button id="btn-play" class="flex-1 brutal-border-orange bg-panel text-danger py-3 flex justify-center items-center hover:opacity-80 transition-colors" title="Play">
                         <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -271,19 +260,14 @@
                 </div>
             </div>
             
-            <!-- Timeline de Progreso Interactivo -->
             <div class="w-full mt-4 relative flex items-center">
                 <input type="range" id="progress-slider" min="0" max="100" step="0.1" value="0" class="w-full" disabled>
             </div>
-            
-            <!-- SE ELIMINÓ EL bg-audio. Volvemos al motor puro. -->
         </footer>
 
     </div>
 
-    <!-- Script Principal -->
     <script>
-        // --- MANEJO DEL TEMA VISUAL (SKINS) ---
         const btnTheme = document.getElementById('btn-theme');
         let currentTheme = localStorage.getItem('audioQueue_theme') || 'brutal';
         document.documentElement.setAttribute('data-theme', currentTheme);
@@ -300,12 +284,8 @@
             btnTheme.innerText = currentTheme === 'brutal' ? '[ SKIN: BRUTAL ]' : '[ SKIN: 70s REC ]';
         }
 
-        /**
-         * ESTADO Y BASE DE DATOS LOCAL
-         */
         let playlist = JSON.parse(localStorage.getItem('audioQueue_db_v1')) || [];
         
-        // --- AUTO-CORRECTOR DE ORDEN ---
         playlist.sort((a, b) => {
             const parseDateStr = (dateStr, id) => {
                 if (dateStr && dateStr.includes('/')) {
@@ -322,12 +302,11 @@
         let currentVoice = null;
         let currentItemIndex = -1;
         
-        // --- VARIABLES DEL MOTOR PURO ---
+        // --- MOTOR PURO + CEBO FONÉTICO ---
         let fullText = "";
         let currentCharIndex = 0;
         let isDraggingProgress = false; 
 
-        // Referencias DOM
         const urlInput = document.getElementById('url-input');
         const btnIngest = document.getElementById('btn-ingest');
         const statusMsg = document.getElementById('status-msg');
@@ -350,9 +329,6 @@
         let sources = JSON.parse(localStorage.getItem('audioQueue_sources_v1')) || [];
         sourcesInput.value = sources.join('\n');
 
-        /**
-         * INICIALIZACIÓN DE VOCES (Búsqueda obsesiva de Mónica Premium)
-         */
         let availableVoices = [];
 
         function initVoices() {
@@ -394,9 +370,6 @@
         window.speechSynthesis.onvoiceschanged = initVoices;
         initVoices();
 
-        /**
-         * LIMPIEZA DE TEXTO (JINA AI -> LECTURA PURA)
-         */
         function cleanJinaText(rawText) {
             let contentStart = rawText.indexOf('Markdown Content:');
             let baseText = contentStart !== -1 ? rawText.substring(contentStart + 17) : rawText;
@@ -415,9 +388,6 @@
                 .trim();
         }
 
-        /**
-         * EXTRACCIÓN MANUAL Y RSS
-         */
         btnIngest.addEventListener('click', async () => {
             const url = urlInput.value.trim();
             if (!url) return;
@@ -548,9 +518,6 @@
             }
         });
 
-        /**
-         * RENDERIZADO Y LÓGICA DE PLAYLIST
-         */
         function renderPlaylist() {
             playlistContainer.innerHTML = '';
             if(playlist.length === 0) {
@@ -650,7 +617,7 @@
         });
 
         // =========================================================
-        // MOTOR DE LECTURA NATIVO (PURO)
+        // MOTOR DE LECTURA NATIVO (CON CEBO FONÉTICO)
         // =========================================================
 
         window.loadAndPlay = function(index) {
@@ -703,7 +670,6 @@
             isPlaying = true;
             updatePlayerButtons('playing');
             
-            // Si el motor estaba simplemente en pausa, lo reanudamos nativamente
             if (window.speechSynthesis.paused) {
                 window.speechSynthesis.resume();
             } else {
@@ -744,10 +710,13 @@
                 return;
             }
 
-            // Alimentamos al motor de Apple con un solo bloque continuo.
-            // Esto evita que tenga que iniciar procesos de audio repetidamente,
-            // eliminando de raíz el "clipping" (comerse consonantes).
-            const textToRead = fullText.substring(currentCharIndex);
+            // TÁCTICA ANTI-CLIPPING: EL CEBO FONÉTICO
+            // Inyectamos 5 caracteres silenciosos al principio. El hardware se despierta 
+            // "leyendo" el vacío y está listo para pronunciar la primera palabra real.
+            const warmup = " . . "; 
+            const realText = fullText.substring(currentCharIndex);
+            const textToRead = warmup + realText;
+            
             const utterance = new SpeechSynthesisUtterance(textToRead);
             
             if (currentVoice) utterance.voice = currentVoice;
@@ -756,17 +725,19 @@
             
             const startIndexForThisRun = currentCharIndex;
 
-            // Atamos el slider al progreso real de lectura de Safari
             utterance.onboundary = (e) => {
                 if (!isDraggingProgress) {
-                    currentCharIndex = startIndexForThisRun + e.charIndex;
+                    // Restamos la longitud del cebo para que el progreso coincida con el texto real
+                    let adjustedIndex = e.charIndex - warmup.length;
+                    if (adjustedIndex < 0) return; // Si está leyendo el cebo, no hacemos nada
+                    
+                    currentCharIndex = startIndexForThisRun + adjustedIndex;
                     const percentage = (currentCharIndex / fullText.length) * 100;
                     progressSlider.value = percentage;
                 }
             };
 
             utterance.onend = () => {
-                // Solo disparamos el final si no fue cancelado a propósito
                 if (isPlaying) {
                     handleFinish();
                 }
